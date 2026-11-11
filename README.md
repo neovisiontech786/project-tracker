@@ -1,35 +1,41 @@
 # Neo Vision Tech — Project Hub
 
-A lightweight project tracker designed for two founders. UI direction based on the approved Google Stitch export: Geist typography, slate canvas, indigo accents, compact tables, status badges and clean project-detail views.
+A focused private tracker for Kabir and Naushad with the agreed Stitch-inspired interface.
 
-## Included UI
-- Dashboard with six summary cards, recent projects, on-hold reasons and upcoming deadlines.
-- Project list with filters, search, owner views and table/card layouts.
-- Create and edit project forms, status management and required on-hold notes.
-- Project detail tabs: Overview, Notes, Documents and Activity.
-- Document upload preview with 20 MB size and extension validation.
-- Sign-in visual preview, responsive navigation, and workspace settings.
+## Stack
+Next.js 16, React 19, Clerk, Neon PostgreSQL, Neon Object Storage, TypeScript, Lucide icons.
+
+## Features
+- Dashboard with project counts, progress, on-hold reasons, and deadlines
+- Project creation, editing, progress, status, owners, archive/restore
+- Simple on-hold reasons and resume history
+- Shared project notes and activity timeline
+- Private uploads and signed downloads (PDF, Office documents, JPG/PNG, ZIP, up to 20 MB)
+- Two-email access allowlist enforced by the server
+
+## Deployment
+1. Use the dedicated Neon project **Neo Vision Tech Project Hub**. Its initial SQL schema is in `db/migrations/0001_init.sql`; it has already been applied to Neon.
+2. In Clerk, create a new application, disable public sign-ups, and create the two founder accounts.
+3. Add `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `ALLOWED_FOUNDER_EMAILS` to Vercel's Project Settings. Founder emails must be in **Kabir,Naushad** order.
+4. Add `DATABASE_URL`, `NEON_STORAGE_ENDPOINT`, `NEON_STORAGE_REGION`, `NEON_STORAGE_ACCESS_KEY`, `NEON_STORAGE_SECRET_KEY`. These have been provisioned on the connected Vercel project.
+5. Deploy the Next.js project, using a Vercel plan appropriate to its business use.
+6. Open the live URL and sign in with one of the two pre-created Clerk accounts.
+
+Only two authenticated, allowlisted emails may access API data. Signed private file URLs are issued for a short period and only after authorization. No credentials should be committed to Git.
 
 ## Run locally
 
-```bash
+```sh
 npm install
+cp .env.example .env.local
+# populate credentials in .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000` (redirects to dashboard). Review the sign-in design at `/sign-in`.
+Open http://localhost:3000.
 
-## Important: UI preview, not production storage
-
-This stage is **the design/UI implementation**. Data comes from clearly fictional sample projects, stored in browser localStorage. File contents uploaded during preview stay in browser IndexedDB; files are **not** shared across founders. The sign-in screen is a visual prototype, not a live Clerk login.
-
-The **Neon + Drizzle database schema** is in `src/db/schema.ts`. The backend, Clerk server-side allowlist, migrations and private cloud file storage are separate integration steps that require your environment credentials. Do not place client records or confidential documents in the prototype.
-
-## Production stack (agreed)
-- Next.js + TypeScript
-- Clerk authentication for exactly two allowlisted founders
-- Neon PostgreSQL Free + Drizzle
-- Private object storage for documents (to finalize and verify limits)
-- Vercel-compatible deployment; check Vercel Hobby non-commercial restrictions before hosting business use
-
-Never commit `.env.local` or other secrets.
+## Limitations
+- There is no client portal or task board.
+- Private direct uploads require the storage service to accept CORS preflight from your deployed origin. Configure storage CORS if the browser blocks an upload.
+- Project updates use individual database queries; the hold-transition and activity entries should be consolidated into atomic transactions before production-critical usage.
+- The free Vercel Hobby plan has non-commercial-use restrictions; check its terms for company use.

@@ -9,9 +9,9 @@ import { Modal } from "./ui";
 const blank:ProjectDraft={name:"",description:"",type:"Client Project",client:"",status:"Not Started",owner:"Both",deadline:""};
 export function NewProjectModal({open,onClose}:{open:boolean,onClose:()=>void}){
  const router=useRouter(); const {createProject}=useHub();
- const [draft,setDraft]=useState<ProjectDraft>(blank); const [error,setError]=useState("");
+ const [draft,setDraft]=useState<ProjectDraft>(blank); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
  const update=<K extends keyof ProjectDraft>(key:K,value:ProjectDraft[K])=>setDraft(s=>({...s,[key]:value}));
- const submit=(e:FormEvent)=>{e.preventDefault();if(!draft.name.trim()){setError("Project name is required.");return;}if(draft.status==="On Hold"){setError("Create the project first, then add an on-hold reason.");return;}const id=createProject({...draft,name:draft.name.trim()});setDraft(blank);setError("");onClose();router.push(`/projects/${id}`);};
+ const submit=async(e:FormEvent)=>{e.preventDefault();if(!draft.name.trim()){setError("Project name is required.");return;}if(draft.status==="On Hold"){setError("Create the project first, then add an on-hold reason.");return;}setBusy(true);try{const id=await createProject({...draft,name:draft.name.trim()});setDraft(blank);setError("");onClose();router.push(`/projects/${id}`);}catch(e){setError(e instanceof Error?e.message:"Could not create project.");}finally{setBusy(false);}};
  return <Modal open={open} title="Create new project" subtitle="Give your project a home. You can change these details later." onClose={onClose} wide>
   <form className="modal-form" onSubmit={submit}>
    <div className="field"><label htmlFor="new-name">Project name <em>*</em></label><input id="new-name" value={draft.name} onChange={e=>update("name",e.target.value)} placeholder="e.g. E-commerce mobile application" autoFocus/></div>
@@ -20,7 +20,7 @@ export function NewProjectModal({open,onClose}:{open:boolean,onClose:()=>void}){
    {draft.type==="Client Project"&&<div className="field"><label>Client name</label><input value={draft.client} onChange={e=>update("client",e.target.value)} placeholder="Client or company name"/></div>}
    <div className="field-pair"><div className="field"><label>Initial status</label><select value={draft.status} onChange={e=>update("status",e.target.value as ProjectStatus)}>{PROJECT_STATUSES.map(s=><option key={s}>{s}</option>)}</select></div><div className="field"><label>Expected deadline</label><input type="date" value={draft.deadline} onChange={e=>update("deadline",e.target.value)}/></div></div>
    {error&&<p className="form-error">{error}</p>}
-   <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button><button className="btn btn-primary" type="submit">Create project <ArrowRight size={16}/></button></div>
+   <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button><button className="btn btn-primary" type="submit" disabled={busy}>{busy?"Creating...":"Create project"} <ArrowRight size={16}/></button></div>
   </form>
  </Modal>;
 }

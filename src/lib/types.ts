@@ -5,6 +5,7 @@ export type ProjectAccent = "indigo" | "cyan" | "rose" | "amber" | "emerald" | "
 
 export interface Project {
   id: string;
+  code?: string;
   name: string;
   description: string;
   type: ProjectType;
