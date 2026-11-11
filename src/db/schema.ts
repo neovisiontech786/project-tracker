@@ -60,6 +60,7 @@ export const projects = pgTable(
     type: projectTypeEnum("type").notNull().default("client"),
     clientName: varchar("client_name", { length: 180 }),
     status: projectStatusEnum("status").notNull().default("not_started"),
+    ownerSelection: varchar("owner_selection", { length: 16 }).notNull().default("Both"),
     progress: integer("progress").notNull().default(0),
     startDate: date("start_date", { mode: "string" }),
     dueDate: date("due_date", { mode: "string" }),
@@ -175,6 +176,7 @@ export const projectDocuments = pgTable(
     mimeType: varchar("mime_type", { length: 255 }).notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     storageKey: text("storage_key").notNull(),
+    uploadStatus: varchar("upload_status", { length: 16 }).notNull().default("pending"),
     uploadedById: varchar("uploaded_by_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
