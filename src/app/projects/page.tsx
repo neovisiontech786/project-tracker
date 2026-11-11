@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState, useEffect } from "react";
+import { Suspense, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowUpRight, ChevronDown, ChevronRight, FolderKanban, LayoutGrid, List, Search, SlidersHorizontal } from "lucide-react";
@@ -9,7 +9,8 @@ import { useHub } from "@/lib/project-store";
 import { dateCompact } from "@/lib/format";
 import type { ProjectStatus } from "@/lib/types";
 const filters=["All Projects","In Progress","On Hold","Not Started","Completed","Cancelled"] as const;
-export default function ProjectsPage(){
+export default function ProjectsPage(){return <Suspense fallback={<div className="page-container"><div className="surface-card" style={{padding:24}}>Loading projects…</div></div>}><ProjectsContent/></Suspense>}
+function ProjectsContent(){
  const {projects}=useHub();const params=useSearchParams();const fromUrl=params.get("status")||"All Projects";const archived=params.get("view")==="archived";const owner=params.get("owner");
  const [filter,setFilter]=useState<string>(fromUrl);const [search,setSearch]=useState("");const [layout,setLayout]=useState<"list"|"cards">("list");
  useEffect(()=>{setFilter(fromUrl);},[fromUrl]);
