@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Archive, ArrowUpRight, Bell, ChevronsUpDown, CircleHelp, FolderKanban, LayoutGrid, LockKeyhole, Menu, Plus, Search, Settings2, Sparkles, X } from "lucide-react";
 import { useHub } from "@/lib/project-store";
@@ -14,7 +15,7 @@ export function AppShell({children}:{children:React.ReactNode}){
  const activeCount=projects.filter(p=>!p.archived&&p.status==="In Progress").length;
  const searchable=projects.filter(p=>!p.archived&&(`${p.name} ${p.client}`).toLowerCase().includes(term.toLowerCase())).slice(0,5);
  const nav=<>
-   <div className="brand-row"><div className="brand-mark"><span className="brand-mark-line"/></div><div className="brand-copy"><strong>Neo Vision</strong><span>PROJECT HUB</span></div><ChevronsUpDown size={15} className="brand-chevrons"/></div>
+   <Link href="/dashboard" className="brand-row" aria-label="Neo Vision Tech Project Hub"><div className="brand-mark"><Image src="/branding/neo-vision-mark.webp" alt="Neo Vision Tech emblem" width={34} height={34} className="brand-logo-image" priority/></div><div className="brand-copy"><strong>Neo Vision Tech</strong><span>PROJECT HUB</span></div><ChevronsUpDown size={15} className="brand-chevrons"/></Link>
    <div className="workspace-pill"><span className="workspace-circle">N</span><div><strong>Neo Vision Tech</strong><small>Private workspace</small></div><span className="workspace-more">•••</span></div>
    <div className="sidebar-label section-label">WORKSPACE</div>
    <div className="sidebar-nav">{NAV[0].entries.map(({href,name,Icon})=><Link key={href} href={href} onClick={()=>setMobileOpen(false)} className={`nav-link ${path===href||(href==="/projects"&&path.startsWith("/projects"))?"is-active":""}`}><Icon size={18} strokeWidth={1.9}/><span>{name}</span>{name==="All Projects"&&<span className="nav-counter">{projects.filter(p=>!p.archived).length}</span>}</Link>)}</div>
@@ -27,7 +28,7 @@ export function AppShell({children}:{children:React.ReactNode}){
  </>;
  if(error && (error.includes("Founder access pending") || error.includes("different Clerk account") || error.includes("founder seat"))){
    return <div className="access-wait-page"><section className="access-wait-card">
-     <div className="signin-logo"><span className="brand-mark-line"/></div>
+     <div className="signin-logo"><Image src="/branding/neo-vision-mark.webp" alt="Neo Vision Tech emblem" width={64} height={64} className="brand-logo-image" priority/></div>
      <span className="signin-eyebrow">NEO VISION TECH · PROJECT HUB</span>
      <h1>Account approval required</h1>
      <p>{error}</p>
