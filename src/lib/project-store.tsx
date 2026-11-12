@@ -26,9 +26,9 @@ async function api<T>(url:string,init?:RequestInit):Promise<T>{
 const json=(method:string,body:unknown):RequestInit=>({method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 export function ProjectStoreProvider({children}:{children:ReactNode}){
  const [data,setData]=useState<HubData>(EMPTY);
- const [ready,setReady]=useState(false);const [error,setError]=useState('');const {isLoaded,isSignedIn}=useAuth();
+ const [ready,setReady]=useState(false);const [error,setError]=useState('');const {isLoaded,isSignedIn,userId}=useAuth();
  const reload=useCallback(async()=>{try{const result=await api<HubData>('/api/hub');setData(result);setError('');}catch(e){setError(e instanceof Error?e.message:'Unable to load workspace.');throw e;}finally{setReady(true);}},[]);
- useEffect(()=>{if(!isLoaded)return;if(!isSignedIn){setData(EMPTY);setError('');setReady(true);return;}void reload().catch(()=>{});const refresh=()=>{if(document.visibilityState==="visible")void reload().catch(()=>{});};window.addEventListener("focus",refresh);const id=window.setInterval(refresh,60000);return ()=>{window.removeEventListener("focus",refresh);window.clearInterval(id);};},[reload,isLoaded,isSignedIn]);
+ useEffect(()=>{if(!isLoaded)return;setData(EMPTY);setError("");setReady(false);if(!isSignedIn||!userId){setReady(true);return;}void reload().catch(()=>{});const refresh=()=>{if(document.visibilityState==="visible")void reload().catch(()=>{});};window.addEventListener("focus",refresh);const id=window.setInterval(refresh,60000);return ()=>{window.removeEventListener("focus",refresh);window.clearInterval(id);};},[reload,isLoaded,isSignedIn,userId]);
  const createProject=useCallback(async(draft:ProjectDraft)=>{
    const result=await api<{id:string}>('/api/hub',json('POST',{action:'create',draft}));await reload();return result.id;
  },[reload]);
