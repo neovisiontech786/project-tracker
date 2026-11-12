@@ -7,6 +7,7 @@ import { Archive, ArrowUpRight, Bell, ChevronsUpDown, CircleHelp, FolderKanban, 
 import { useHub } from "@/lib/project-store";
 import {useUser,SignOutButton} from "@clerk/nextjs";
 import { NewProjectModal } from "./new-project-modal";
+import { ThemeToggle } from "./theme-provider";
 
 const NAV=[{title:"Overview",entries:[{href:"/dashboard",name:"Dashboard",Icon:LayoutGrid},{href:"/projects",name:"All Projects",Icon:FolderKanban},{href:"/projects?view=archived",name:"Archived",Icon:Archive},{href:"/projects?view=private",name:"My Private Projects",Icon:LockKeyhole}]},{title:"Workspace",entries:[{href:"/settings",name:"Settings",Icon:Settings2}]}];
 export function AppShell({children}:{children:React.ReactNode}){
@@ -44,7 +45,7 @@ export function AppShell({children}:{children:React.ReactNode}){
    {mobileOpen&&<div className="mobile-overlay" onClick={()=>setMobileOpen(false)}><aside className="sidebar mobile-sidebar" onClick={e=>e.stopPropagation()}><button className="mobile-close icon-button" onClick={()=>setMobileOpen(false)} aria-label="Close navigation"><X size={20}/></button>{nav}</aside></div>}
    <div className="main-column">
      <header className="topbar"><div className="topbar-left"><button className="icon-button hamburger" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={20}/></button><span className="breadcrumb-root">Workspace</span><span className="breadcrumb-slash">/</span><span className="breadcrumb-current">{path.startsWith("/projects/")?"Project details":path.startsWith("/projects")?"Projects":path==="/settings"?"Settings":"Dashboard"}</span></div>
-       <div className="topbar-right"><button className="top-search" onClick={()=>setSearchOpen(true)}><Search size={17}/><span>Quick search</span><kbd>⌘ K</kbd></button><span className="topbar-split"/><button className="icon-button notification-button" title="Demo: notifications aren't connected yet" onClick={()=>setSearchOpen(true)} aria-label="Search project updates"><Bell size={19}/><span className="notification-dot"/></button><div className="top-avatar">{(user?.firstName||"F")[0]}</div></div>
+       <div className="topbar-right"><button className="top-search" onClick={()=>setSearchOpen(true)}><Search size={17}/><span>Quick search</span><kbd>⌘ K</kbd></button><ThemeToggle/><span className="topbar-split"/><button className="icon-button notification-button" title="Demo: notifications aren't connected yet" onClick={()=>setSearchOpen(true)} aria-label="Search project updates"><Bell size={19}/><span className="notification-dot"/></button><div className="top-avatar">{(user?.firstName||"F")[0]}</div></div>
      </header>
      {error&&<div className="demo-strip" role="alert"><Sparkles size={13}/><strong>Connection issue</strong><span>{error}</span></div>}{!ready&&<div className="demo-strip">Loading shared workspace…</div>}
      <main className="page-main">{children}</main>
