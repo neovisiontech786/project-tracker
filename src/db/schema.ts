@@ -62,6 +62,7 @@ export const projects = pgTable(
     status: projectStatusEnum("status").notNull().default("not_started"),
     ownerSelection: varchar("owner_selection", { length: 16 }).notNull().default("Both"),
     progress: integer("progress").notNull().default(0),
+    isPrivate: boolean("is_private").notNull().default(false),
     startDate: date("start_date", { mode: "string" }),
     dueDate: date("due_date", { mode: "string" }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
