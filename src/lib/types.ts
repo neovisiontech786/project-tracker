@@ -20,7 +20,7 @@ export interface Project {
   accent: ProjectAccent;
   onHoldReason?: string;
   archived?: boolean;
-  isPrivate: boolean;
+  isPrivate?: boolean;
   isCreator?: boolean;
 }
 export interface ProjectNote {
