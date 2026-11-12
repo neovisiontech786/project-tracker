@@ -1,0 +1,392 @@
+/* Neo Vision Tech Project Hub — accessible, full-surface dark palette.
+   Light mode retains the existing Stitch-inspired appearance.
+   Contrast target: WCAG AA for normal body text and interactive controls. */
+html[data-theme="dark"] {
+  --bg:#0c1424;
+  --white:#151f31;
+  --text:#edf3fc;
+  --muted:#b7c4d7;
+  --line:#334159;
+  --line-soft:#29364c;
+  --indigo:#aaa8ff;
+  --indigo-dark:#c0bdff;
+  --indigo-soft:#282747;
+  --blue:#94c3ff;
+  --blue-soft:#203551;
+  --amber:#ffcf91;
+  --amber-soft:#3b2d20;
+  --green:#8ee8c0;
+  --green-soft:#173a30;
+  color-scheme:dark;
+}
+html[data-theme="dark"] body {background:var(--bg);color:var(--text)}
+html[data-theme="dark"] ::selection{background:#4a4a9c;color:#fff}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb{background:#3a4a63;border-color:#111a2a}
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {color:var(--text);caret-color:#c5c0ff}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder{color:#a3b1c7}
+html[data-theme="dark"] :is(button,a,input,textarea,select):focus-visible{outline:3px solid #9991ffc4;outline-offset:2px}
+
+/* App frame, sidebar, top bar and global navigation */
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] .topbar {background:#111b2c;border-color:#2b3b52}
+html[data-theme="dark"] .brand-copy strong,
+html[data-theme="dark"] .workspace-pill strong,
+html[data-theme="dark"] .sidebar-hint strong,
+html[data-theme="dark"] .sidebar-profile strong,
+html[data-theme="dark"] .breadcrumb-current {color:#f0f5ff}
+html[data-theme="dark"] .brand-copy span,
+html[data-theme="dark"] .brand-row:hover .brand-copy strong{color:#b2abff}
+html[data-theme="dark"] .brand-chevrons,
+html[data-theme="dark"] .workspace-more,
+html[data-theme="dark"] .section-label,
+html[data-theme="dark"] .sidebar-label,
+html[data-theme="dark"] .breadcrumb-root,
+html[data-theme="dark"] .topbar-left {color:#a9b8cf}
+html[data-theme="dark"] .workspace-pill,
+html[data-theme="dark"] .sidebar-hint {background:#1b273b;border-color:#33435a}
+html[data-theme="dark"] .workspace-pill small,
+html[data-theme="dark"] .sidebar-hint p,
+html[data-theme="dark"] .sidebar-profile small{color:#b7c3d6}
+html[data-theme="dark"] .workspace-circle {background:#35345e;color:#d4d2ff}
+html[data-theme="dark"] .nav-link {color:#bbc8dd}
+html[data-theme="dark"] .nav-link:hover {background:#253149;color:#fff}
+html[data-theme="dark"] .nav-link.is-active{background:#2e3058;color:#e1ddff}
+html[data-theme="dark"] .nav-counter {background:#364059;color:#d6e2f4}
+html[data-theme="dark"] .sidebar-hint>span,
+html[data-theme="dark"] .hint-stars {color:#b7b1ff}
+html[data-theme="dark"] .sidebar-profile,
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .topbar-split{border-color:#2b3b52}
+html[data-theme="dark"] .profile-avatar,
+html[data-theme="dark"] .top-avatar{background:#283c68;color:#e3eeff;border-color:#152137}
+html[data-theme="dark"] .top-search{background:#1b273b;border-color:#34455e;color:#bbc9dd}
+html[data-theme="dark"] .top-search:hover{border-color:#7e7ed6}
+html[data-theme="dark"] .top-search kbd{background:#344057;color:#d8e4f4}
+html[data-theme="dark"] .topbar-split{background:#344058}
+html[data-theme="dark"] .icon-button{color:#c7d3e6}
+html[data-theme="dark"] .icon-button:hover{background:#273650;color:#fff}
+html[data-theme="dark"] .demo-strip{background:#292e56;border-color:#41466f;color:#dbdcff}
+html[data-theme="dark"] .demo-strip strong{color:#efefff}
+html[data-theme="dark"] .page-heading h1,
+html[data-theme="dark"] .stitch-dashboard .dashboard-heading-row h1,
+html[data-theme="dark"] .detail-titleblock h1{color:#f2f5ff}
+html[data-theme="dark"] .page-heading p,
+html[data-theme="dark"] .stitch-dashboard .dashboard-heading-row p,
+html[data-theme="dark"] .date-caption {color:#b7c4d7}
+html[data-theme="dark"] .eyebrow,
+html[data-theme="dark"] .page-heading h1 span {color:#b7b0ff}
+html[data-theme="dark"] .profile-green{box-shadow:0 0 0 3px #1a493c}
+
+/* Buttons, tags, chips, icon containers */
+html[data-theme="dark"] .btn-primary,
+html[data-theme="dark"] .mobile-fab {background:#5b53db;border-color:#8077ff;color:#fff}
+html[data-theme="dark"] .btn-primary:hover{background:#6b62e8;border-color:#8d83ff}
+html[data-theme="dark"] .btn-secondary,
+html[data-theme="dark"] .btn-outline-small{background:#1d293c;border-color:#40516a;color:#e6effb}
+html[data-theme="dark"] .btn-secondary:hover,
+html[data-theme="dark"] .btn-outline-small:hover{background:#2a3b54;border-color:#657697}
+html[data-theme="dark"] .btn-archive{background:#432a39;border-color:#8c4b60;color:#ffbccb}
+html[data-theme="dark"] .btn-archive:hover{background:#553043}
+html[data-theme="dark"] .metric-icon,
+html[data-theme="dark"] .section-icon,
+html[data-theme="dark"] .summary-icon,
+html[data-theme="dark"] .project-intro-icon,
+html[data-theme="dark"] .side-file-icon,
+html[data-theme="dark"] .note-author-icon,
+html[data-theme="dark"] .upload-icon,
+html[data-theme="dark"] .empty-icon,
+html[data-theme="dark"] .settings-icon {background:#30345a;color:#bebaff}
+html[data-theme="dark"] .settings-icon.blue{background:#183c50;color:#88dcff}
+html[data-theme="dark"] .metric-hold{background:#403222;color:#ffcd90}
+html[data-theme="dark"] .metric-done{background:#1c3a30;color:#91e8bd}
+html[data-theme="dark"] .metric-running{background:#223e60;color:#a9cdff}
+html[data-theme="dark"] .metric-new{background:#344157;color:#d7e0ee}
+html[data-theme="dark"] .metric-remaining{background:#383052;color:#c9adff}
+html[data-theme="dark"] .accent-indigo{background:#2d315b;color:#c2baff}
+html[data-theme="dark"] .accent-cyan{background:#174153;color:#8cdeff}
+html[data-theme="dark"] .accent-rose{background:#49283a;color:#ffb1c5}
+html[data-theme="dark"] .accent-amber{background:#4a3521;color:#ffd091}
+html[data-theme="dark"] .accent-emerald{background:#1d4237;color:#96edc5}
+html[data-theme="dark"] .accent-violet{background:#383056;color:#d1b0ff}
+html[data-theme="dark"] .status-running{background:#2e315b;border-color:#5356a3;color:#c5c1ff}
+html[data-theme="dark"] .status-hold{background:#423324;border-color:#886039;color:#ffd1a0}
+html[data-theme="dark"] .status-done{background:#1c3d34;border-color:#376d54;color:#a1efd0}
+html[data-theme="dark"] .status-new{background:#303d52;border-color:#4a5a73;color:#d6e1ef}
+html[data-theme="dark"] .status-cancelled{background:#492b3b;border-color:#81506a;color:#ffc0cb}
+html[data-theme="dark"] .project-type-tag{background:#273955;color:#c8dcff}
+html[data-theme="dark"] .project-type-tag.internal{background:#363054;color:#d9c2ff}
+html[data-theme="dark"] .small-count,
+html[data-theme="dark"] .filter-tab span,
+html[data-theme="dark"] .detail-tab span,
+html[data-theme="dark"] .notes-list h3 span,
+html[data-theme="dark"] .document-list-head h3 span{background:#353555;color:#dedcff}
+html[data-theme="dark"] .hold-count{background:#482b35;color:#ffb5c3}
+html[data-theme="dark"] .member-tag{background:#323057;color:#c9c2ff!important}
+html[data-theme="dark"] .private-badge,
+html[data-theme="dark"] .project-privacy-mini{background:#323258;border-color:#58538c;color:#d7d3ff}
+
+/* Cards, tables, dashboard and metrics */
+html[data-theme="dark"] .surface-card,
+html[data-theme="dark"] .metric-card,
+html[data-theme="dark"] .project-grid-card,
+html[data-theme="dark"] .detail-section,
+html[data-theme="dark"] .side-panel,
+html[data-theme="dark"] .detail-side,
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .appearance-settings{background:#172235;border-color:#304057;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+html[data-theme="dark"] .metric-card:hover,
+html[data-theme="dark"] .project-grid-card:hover{border-color:#7372c5;box-shadow:0 6px 22px rgba(0,0,0,.22)}
+html[data-theme="dark"] .metric-head>span,
+html[data-theme="dark"] .metric-foot,
+html[data-theme="dark"] .card-titlebar p,
+html[data-theme="dark"] .section-heading p,
+html[data-theme="dark"] .workspace-summary p,
+html[data-theme="dark"] .deadline-sub{color:#b4c2d6}
+html[data-theme="dark"] .metric-card>strong,
+html[data-theme="dark"] .project-grid-card h3,
+html[data-theme="dark"] .card-titlebar h2,
+html[data-theme="dark"] .section-heading h2,
+html[data-theme="dark"] .project-intro strong,
+html[data-theme="dark"] .workspace-summary strong{color:#f0f5ff}
+html[data-theme="dark"] .project-table thead{background:#202c40}
+html[data-theme="dark"] .project-table th{color:#becae0}
+html[data-theme="dark"] .project-table td{color:#d0daea}
+html[data-theme="dark"] .project-table tbody tr{border-color:#2d3c52}
+html[data-theme="dark"] .project-table tbody tr:hover{background:#233148}
+html[data-theme="dark"] .project-table-name strong{color:#f1f5fc}
+html[data-theme="dark"] .project-table-name small{color:#b7c4d7}
+html[data-theme="dark"] .table-arrow,
+html[data-theme="dark"] .table-footer,
+html[data-theme="dark"] .date-text,
+html[data-theme="dark"] .owner-label,
+html[data-theme="dark"] .progress-table-cell>span{color:#b3c2d6}
+html[data-theme="dark"] .table-arrow:hover{color:#c2bcff}
+html[data-theme="dark"] .progress-outer,
+html[data-theme="dark"] .metric-track {background:#30415b}
+html[data-theme="dark"] .progress-inner,
+html[data-theme="dark"] .metric-fill{background:#8c85ff}
+html[data-theme="dark"] .metric-fill-hold{background:#f5b86b}
+html[data-theme="dark"] .metric-fill-done{background:#54d8af}
+html[data-theme="dark"] .metric-fill-new{background:#a0adc4}
+html[data-theme="dark"] .metric-fill-remaining{background:#b59dff}
+html[data-theme="dark"] .owner-avatar{border-color:#1a2538}
+html[data-theme="dark"] .avatar-k{background:#6056e5;color:white}
+html[data-theme="dark"] .avatar-n{background:#077fac;color:white}
+html[data-theme="dark"] .project-grid-card>p,
+html[data-theme="dark"] .project-card-progress>span,
+html[data-theme="dark"] .project-grid-footer,
+html[data-theme="dark"] .project-grid-card-top{color:#bac8dc}
+html[data-theme="dark"] .project-card-progress b,
+html[data-theme="dark"] .workspace-summary>a,
+html[data-theme="dark"] .card-titlebar a,
+html[data-theme="dark"] .link-action,
+html[data-theme="dark"] .side-cta{color:#b9b4ff}
+html[data-theme="dark"] .project-intro{background:linear-gradient(105deg,#1f2942,#1a273b);border-color:#3a4771}
+html[data-theme="dark"] .project-intro p{color:#b9c6da}
+html[data-theme="dark"] .project-intro-ornament{color:#394665}
+html[data-theme="dark"] .attention-item{background:#1d2a3e;border-color:#39465f}
+html[data-theme="dark"] .attention-item:hover{border-color:#5c5fa4}
+html[data-theme="dark"] .attention-item-head strong,
+html[data-theme="dark"] .deadline-item-top strong{color:#ecf3ff}
+html[data-theme="dark"] .attention-item-head small{color:#f0becd}
+html[data-theme="dark"] .attention-item p{background:#27344a;border-color:#3c4960;color:#e0e9f6}
+html[data-theme="dark"] .attention-item>span{color:#c2baff}
+html[data-theme="dark"] .attention-clear{color:#7be5bc}
+html[data-theme="dark"] .attention-clear strong{color:#eef5fc}
+html[data-theme="dark"] .attention-clear p,
+html[data-theme="dark"] .deadline-date,
+html[data-theme="dark"] .empty-side,
+html[data-theme="dark"] .empty-compact{color:#b5c3d8}
+
+/* Project list, filters and search */
+html[data-theme="dark"] .filter-tab,
+html[data-theme="dark"] .results-label,
+html[data-theme="dark"] .view-toggle button{color:#bac7d9}
+html[data-theme="dark"] .filter-tab.active,
+html[data-theme="dark"] .detail-tab.active{color:#c6c1ff}
+html[data-theme="dark"] .filter-tab.active:after,
+html[data-theme="dark"] .detail-tab.active:after{background:#aaa3ff}
+html[data-theme="dark"] .list-search,
+html[data-theme="dark"] .view-toggle{background:#1d293c;border-color:#3b4c65;color:#b8c6d9}
+html[data-theme="dark"] .list-search:focus-within{border-color:#aaa3ff;box-shadow:0 0 0 3px #aba3ff28}
+html[data-theme="dark"] .list-search input{background:transparent;color:#f1f5fc}
+html[data-theme="dark"] .list-search input::placeholder{color:#a7b6c9}
+html[data-theme="dark"] .view-toggle button.selected{background:#323f57;color:#d6d0ff}
+html[data-theme="dark"] .search-dialog,
+html[data-theme="dark"] .modal-panel{background:#182338;border:1px solid #364760;box-shadow:0 25px 65px rgba(0,0,0,.48)}
+html[data-theme="dark"] .search-dialog-input,
+html[data-theme="dark"] .search-dialog-input input{color:#f0f5ff}
+html[data-theme="dark"] .search-dialog-input input{background:transparent}
+html[data-theme="dark"] .search-dialog-input input::placeholder{color:#a6b7cf}
+html[data-theme="dark"] .kbd-button{background:#29364b;border-color:#40516b;color:#d5e2f3}
+html[data-theme="dark"] .search-results-label,
+html[data-theme="dark"] .search-hit small,
+html[data-theme="dark"] .search-hit svg,
+html[data-theme="dark"] .search-none{color:#b2c1d6}
+html[data-theme="dark"] .search-hit:hover{background:#263650}
+html[data-theme="dark"] .search-hit>span:nth-child(2){color:#f1f6ff}
+html[data-theme="dark"] .filter-tab.active:after{background:#ada7ff}
+
+/* Project details: overview, progress, notes, files, hold alerts and activity */
+html[data-theme="dark"] .detail-breadcrumb,
+html[data-theme="dark"] .detail-breadcrumb a,
+html[data-theme="dark"] .detail-overline,
+html[data-theme="dark"] .detail-subline{color:#b9c8dc}
+html[data-theme="dark"] .detail-breadcrumb a:hover{color:#c2baff}
+html[data-theme="dark"] .detail-divider{background:#42506a}
+html[data-theme="dark"] .status-menu{background:#1c2a3f;border-color:#40516a;box-shadow:0 14px 40px #0005}
+html[data-theme="dark"] .status-menu button{color:#e6eef9}
+html[data-theme="dark"] .status-menu button:hover{background:#2c3b54}
+html[data-theme="dark"] .detail-tab{color:#b9c6d8}
+html[data-theme="dark"] .detail-description,
+html[data-theme="dark"] .detail-info-grid span,
+html[data-theme="dark"] .progress-steps,
+html[data-theme="dark"] .progress-adjust,
+html[data-theme="dark"] .side-field>span:first-child,
+html[data-theme="dark"] .side-heading>span,
+html[data-theme="dark"] .side-file small,
+html[data-theme="dark"] .side-empty,
+html[data-theme="dark"] .nothing-yet{color:#b9c6da}
+html[data-theme="dark"] .detail-info-grid strong,
+html[data-theme="dark"] .side-field b,
+html[data-theme="dark"] .side-file strong,
+html[data-theme="dark"] .side-panel h3,
+html[data-theme="dark"] .side-heading h3{color:#f0f5fd}
+html[data-theme="dark"] .big-percentage,
+html[data-theme="dark"] .progress-adjust>span:last-child{color:#c0baff}
+html[data-theme="dark"] .note-metadata,
+html[data-theme="dark"] .note-entry-head span{color:#bdcadd}
+html[data-theme="dark"] .note-metadata b,
+html[data-theme="dark"] .notes-list h3,
+html[data-theme="dark"] .document-list-head h3{color:#f0f5fd}
+html[data-theme="dark"] .compact-note p,
+html[data-theme="dark"] .note-entry p{color:#d0dced}
+html[data-theme="dark"] .note-actions{background:#1c293c}
+html[data-theme="dark"] .note-actions span,
+html[data-theme="dark"] .doc-info small,
+html[data-theme="dark"] .document-list-head>span,
+html[data-theme="dark"] .upload-box p,
+html[data-theme="dark"] .upload-box small{color:#b2c2d7}
+html[data-theme="dark"] .add-note-area,
+html[data-theme="dark"] .upload-box{background:#1a273b;border-color:#475a77}
+html[data-theme="dark"] .add-note-area textarea{background:#1a273b;color:#f1f5fc}
+html[data-theme="dark"] .upload-controls select{background:#1f2d42;border-color:#475872;color:#eef5fd}
+html[data-theme="dark"] .timeline-entry:not(:last-child):before{background:#3d4a66}
+html[data-theme="dark"] .timeline-dot{background:#34335d;border-color:#aca6ff}
+html[data-theme="dark"] .timeline-entry p{color:#bdc9dd}
+html[data-theme="dark"] .hold-alert{background:#382b2a;border-color:#885d4b}
+html[data-theme="dark"] .hold-alert-icon{color:#ffad8e}
+html[data-theme="dark"] .hold-alert strong{color:#ffd1b3}
+html[data-theme="dark"] .hold-alert p{color:#f5c4af}
+html[data-theme="dark"] .text-button{color:#ffd0a5}
+html[data-theme="dark"] .inline-notice{background:#1c4035;border-color:#3b8064;color:#bcf5d6}
+html[data-theme="dark"] .inline-notice button{color:#cbf7e0}
+html[data-theme="dark"] .empty-state{color:#b9c8dc}
+html[data-theme="dark"] .empty-state h3{color:#eef4fd}
+html[data-theme="dark"] .missing-project p{color:#b4c3d6}
+html[data-theme="dark"] .demo-file-label{color:#ffcf80}
+html[data-theme="dark"] .delete-action:hover{color:#ffbac5!important;background:#4b2a37!important}
+
+/* Modal forms, validations, interactive controls */
+html[data-theme="dark"] .modal-top h2,
+html[data-theme="dark"] .search-dialog h2{color:#f0f5ff}
+html[data-theme="dark"] .modal-top p{color:#b3c2d8}
+html[data-theme="dark"] .field label{color:#d8e2ef}
+html[data-theme="dark"] .field input,
+html[data-theme="dark"] .field textarea,
+html[data-theme="dark"] .field select{background:#1c293c;border-color:#4b5d77;color:#f2f6ff}
+html[data-theme="dark"] .field input::placeholder,
+html[data-theme="dark"] .field textarea::placeholder{color:#aab8ce}
+html[data-theme="dark"] .field input:focus,
+html[data-theme="dark"] .field textarea:focus,
+html[data-theme="dark"] .field select:focus{border-color:#a9a1ff;box-shadow:0 0 0 3px #aaa3ff2c}
+html[data-theme="dark"] .field label em{color:#ffaeb9}
+html[data-theme="dark"] .form-error{color:#ffabb9}
+html[data-theme="dark"] .archived-alert{background:#2d3850;border-color:#4d5b73;color:#e0e9f5}
+html[data-theme="dark"] .privacy-helper{color:#b8c6da}
+html[data-theme="dark"] .settings-heading h2,
+html[data-theme="dark"] .member-row strong{color:#f0f5ff}
+html[data-theme="dark"] .settings-heading p,
+html[data-theme="dark"] .member-row span,
+html[data-theme="dark"] .settings-info span,
+html[data-theme="dark"] .settings-section p,
+html[data-theme="dark"] .settings-detail span{color:#b9c6d9}
+html[data-theme="dark"] .settings-info strong{color:#eef5ff}
+html[data-theme="dark"] .settings-note{background:#243147;color:#ccdaeb}
+html[data-theme="dark"] .member-row,
+html[data-theme="dark"] .settings-heading,
+html[data-theme="dark"] .settings-info>div{border-color:#35445c}
+html[data-theme="dark"] .access-wait-card{background:#172236;border-color:#36465e;color:#edf4ff;box-shadow:0 15px 45px #0005}
+html[data-theme="dark"] .access-wait-card p{color:#c5d1e3}
+html[data-theme="dark"] .access-wait-card h1{color:#fff}
+
+/* Modern sign-in page: retain the dark navy story, theme the Clerk area */
+html[data-theme="dark"] .signin-page{background:radial-gradient(ellipse at 50% 70%,#1e2d4a 0,transparent 38%),#0b1322}
+html[data-theme="dark"] .signin-page.hub-login{background:radial-gradient(circle at 12% 19%,#202b4d 0,transparent 34%),radial-gradient(circle at 92% 90%,#182e47 0,transparent 29%),#0b1424}
+html[data-theme="dark"] .hub-login-shell{background:#172237;border-color:#36445c;box-shadow:0 22px 80px #0007}
+html[data-theme="dark"] .hub-login-auth{background:linear-gradient(180deg,#162236,#111b2d)}
+html[data-theme="dark"] .hub-login-auth-pill{background:#32335c;color:#ddd8ff}
+html[data-theme="dark"] .hub-login-auth-top p,
+html[data-theme="dark"] .hub-login-auth-footer{color:#becbdf}
+html[data-theme="dark"] .hub-login-clerk .cl-headerTitle{color:#f0f5ff}
+html[data-theme="dark"] .hub-login-clerk .cl-headerSubtitle{color:#becbdf}
+html[data-theme="dark"] .hub-login-clerk .cl-card{background:transparent!important;color:#eef5ff!important}
+html[data-theme="dark"] .hub-login-clerk .cl-formFieldLabel,
+html[data-theme="dark"] .hub-login-clerk .cl-dividerText,
+html[data-theme="dark"] .hub-login-clerk .cl-footerActionText,
+html[data-theme="dark"] .hub-login-clerk .cl-identityPreviewText{color:#d5dff0!important}
+html[data-theme="dark"] .hub-login-clerk .cl-formFieldInput{background:#1b2a40!important;color:#f1f6ff!important;border:1px solid #4d5d78!important}
+html[data-theme="dark"] .hub-login-clerk .cl-formFieldInput::placeholder{color:#aab9d0!important}
+html[data-theme="dark"] .hub-login-clerk .cl-socialButtonsBlockButton,
+html[data-theme="dark"] .hub-login-clerk .cl-socialButtonsIconButton{background:#21324a!important;border-color:#52627e!important;color:#ecf3ff!important}
+html[data-theme="dark"] .hub-login-clerk .cl-socialButtonsBlockButtonText{color:#f0f6ff!important}
+html[data-theme="dark"] .hub-login-clerk .cl-footer,
+html[data-theme="dark"] .hub-login-clerk .cl-footerPages{background:transparent!important}
+html[data-theme="dark"] .hub-login-clerk .cl-footerActionLink,
+html[data-theme="dark"] .hub-login-clerk .cl-formFieldAction,
+html[data-theme="dark"] .hub-login-clerk .cl-backLink{color:#c8c0ff!important}
+html[data-theme="dark"] .hub-login-clerk .cl-dividerLine{background:#3e4b62!important}
+html[data-theme="dark"] .hub-login-clerk .cl-formButtonPrimary{background:#625ce7!important;color:#fff!important}
+html[data-theme="dark"] .hub-login-clerk .cl-formButtonPrimary:hover{background:#7970f0!important}
+html[data-theme="dark"] .signin-card{background:#172337;border-color:#3a4b63;box-shadow:0 18px 46px #0005}
+html[data-theme="dark"] .signin-card h1,
+html[data-theme="dark"] .signin-brand-title{color:#eef5ff}
+html[data-theme="dark"] .signin-card-content>p{color:#c1cede}
+html[data-theme="dark"] .signin-eyebrow{background:#32325c;color:#ddd8ff}
+html[data-theme="dark"] .signin-notice{background:#222f45;border-color:#46556d;color:#d7e3f0}
+html[data-theme="dark"] .signin-foot{background:#1e2b40;border-color:#33465c}
+html[data-theme="dark"] .signin-foot strong{color:#eef5ff}
+html[data-theme="dark"] .signin-foot small,
+html[data-theme="dark"] .signin-security{color:#bcc9dc}
+
+/* Theme control: visible on every page including sign-in */
+.theme-toggle{display:inline-grid;place-items:center;flex:none;width:38px;height:38px;border:1px solid #dce2ed!important;border-radius:10px!important;background:#fff!important;color:#4f46e5!important;transition:background .18s,border-color .18s}
+.theme-toggle:hover{background:#eff1ff!important;border-color:#bbb6f5!important}
+html[data-theme="dark"] .theme-toggle{background:#23314a!important;border-color:#52617a!important;color:#e4e1ff!important}
+html[data-theme="dark"] .theme-toggle:hover{background:#344562!important;border-color:#8987bd!important}
+.login-theme-toggle{position:absolute;z-index:20;right:clamp(24px,4vw,70px);top:clamp(22px,3vw,50px);box-shadow:0 6px 18px #0b142420}
+html[data-theme="dark"] .login-theme-toggle{box-shadow:0 6px 25px #0006}
+
+/* Appearance selection in Settings */
+.appearance-settings{padding:20px;margin-bottom:20px}
+.theme-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;border:0;padding:0;margin:0}
+.theme-option{min-height:122px;position:relative;cursor:pointer;border:1px solid #dce2ee;background:#fbfcff;border-radius:12px;padding:17px 16px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;color:#4b556b;transition:border-color .18s,background .18s,box-shadow .18s}
+.theme-option input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0}
+.theme-option svg{color:#6258cf}
+.theme-option strong{font-size:13px;color:#273147}
+.theme-option span{font-size:11px;color:#707b91}
+.theme-option.is-selected{border-color:#7367df;background:#f4f3ff;box-shadow:0 0 0 2px #6760d52e}
+.theme-option:focus-within{outline:3px solid #7670de8c;outline-offset:2px}
+.theme-current{font-size:11px;color:#69768b;margin:14px 0 0}
+.theme-current strong{color:#4e46ac}
+html[data-theme="dark"] .theme-option{background:#1e2b40;border-color:#44546f;color:#dbe5f4}
+html[data-theme="dark"] .theme-option svg{color:#bcb4ff}
+html[data-theme="dark"] .theme-option strong{color:#f1f5ff}
+html[data-theme="dark"] .theme-option span,
+html[data-theme="dark"] .theme-current{color:#c0cede}
+html[data-theme="dark"] .theme-option.is-selected{background:#303154;border-color:#b4aaff;box-shadow:0 0 0 2px #8379f04d}
+html[data-theme="dark"] .theme-current strong{color:#cdc6ff}
+@media(max-width:640px){.theme-options{grid-template-columns:1fr}.theme-option{min-height:74px;display:grid;grid-template-columns:25px 1fr;grid-template-rows:1fr 1fr;column-gap:12px;align-content:center;padding:13px}.theme-option svg{grid-row:1/span 2;align-self:center}.theme-option strong,.theme-option span{grid-column:2}.login-theme-toggle{right:16px;top:14px}}
