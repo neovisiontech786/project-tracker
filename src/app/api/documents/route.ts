@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import {authorize,database,errorResponse,uuidCheck,validate} from '@/lib/server';
+import {authorize,accessibleProject,AccessError,database,errorResponse,uuidCheck,validate} from '@/lib/server';
 import {confirmFile,removeFile,signDownload,signUpload} from '@/lib/storage';
 
 export const runtime='nodejs';export const dynamic='force-dynamic';
@@ -9,13 +9,16 @@ const extensions:Record<string,string>={
  jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',zip:'application/zip'
 };
 const categories=['requirements','quotations','agreements','designs','other'];
-async function getDocument(id:string){
- const sql=database();const rows=await sql`SELECT * FROM project_documents WHERE id=${id} AND deleted_at IS NULL LIMIT 1`;
- validate(rows.length===1,'Document not found.');return rows[0];
+async function getDocument(id:string, actorId:string){
+ const sql=database();const rows=await sql`SELECT d.* FROM project_documents d
+   JOIN projects p ON p.id=d.project_id WHERE d.id=${id} AND d.deleted_at IS NULL
+   AND (p.is_private=false OR p.created_by_id=${actorId}) LIMIT 1`;
+ if(rows.length!==1)throw new AccessError('Document not found or not accessible.',404);
+ return rows[0];
 }
 export async function GET(req:Request){
- try{await authorize();const id=uuidCheck(new URL(req.url).searchParams.get('id'));
-  const d=await getDocument(id);validate(d.upload_status==='ready','Document upload is incomplete.');
+ try{const actor=await authorize();const id=uuidCheck(new URL(req.url).searchParams.get('id'));
+  const d=await getDocument(id,actor.id);validate(d.upload_status==='ready','Document upload is incomplete.');
   const url=await signDownload(String(d.storage_key),String(d.original_name));
   return Response.json({url},{headers:{'Cache-Control':'no-store'}});
  }catch(e){return errorResponse(e);}
@@ -30,7 +33,7 @@ export async function POST(req:Request){
    validate(!!extensions[ext],'Unsupported document type.');
    validate(Number.isInteger(input.size)&&input.size>0&&input.size<=20*1024*1024,'Maximum file size is 20 MB.');
    const category=String(input.category||'other').toLowerCase();validate(categories.includes(category),'Invalid category.');
-   const exists=await sql`SELECT 1 FROM projects WHERE id=${projectId} LIMIT 1`;validate(exists.length>0,'Project not found.');
+   await accessibleProject(projectId,actor.id);
    const id=randomUUID(),key=`projects/${projectId}/${id}.${ext}`,mimeType=extensions[ext];
    const {url,headers}=await signUpload(key,mimeType);
    await sql`INSERT INTO project_documents (id,project_id,category,original_name,mime_type,size_bytes,storage_key,uploaded_by_id,upload_status)
@@ -38,19 +41,22 @@ export async function POST(req:Request){
    return Response.json({id,url,headers});
   }
   if(input.action==='complete'){
-   const id=uuidCheck(input.id),doc=await getDocument(id);
+   const id=uuidCheck(input.id),doc=await getDocument(id,actor.id);
+   validate(doc.uploaded_by_id===actor.id,'Only the uploader can finalize a document.');
    validate(doc.upload_status==='pending','Document has already been finalized.');
    const confirmed=await confirmFile(String(doc.storage_key),Number(doc.size_bytes));
    validate(confirmed,'Uploaded document size does not match the original request.');
-   await sql`UPDATE project_documents SET upload_status='ready' WHERE id=${id}`;
-   await sql`INSERT INTO activity_logs(project_id,actor_id,action,details) VALUES (${doc.project_id},${actor.id},'document_uploaded',${JSON.stringify({description:`Uploaded ${doc.original_name}`})}::jsonb)`;
+   await sql.transaction([
+    sql`UPDATE project_documents SET upload_status='ready' WHERE id=${id}`,
+    sql`INSERT INTO activity_logs(project_id,actor_id,action,details) VALUES (${doc.project_id},${actor.id},'document_uploaded',${JSON.stringify({description:`Uploaded ${doc.original_name}`})}::jsonb)`
+   ]);
    return Response.json({success:true});
   }
   return Response.json({error:'Unsupported action.'},{status:400});
  }catch(e){return errorResponse(e);}
 }
 export async function DELETE(req:Request){
- try{const actor=await authorize(),sql=database(),{id}=await req.json();const doc=await getDocument(uuidCheck(id));
+ try{const actor=await authorize(),sql=database(),{id}=await req.json();const doc=await getDocument(uuidCheck(id),actor.id);
    await removeFile(String(doc.storage_key));
    await sql`UPDATE project_documents SET deleted_at=now(),deleted_by_id=${actor.id} WHERE id=${id}`;
    await sql`INSERT INTO activity_logs(project_id,actor_id,action,details) VALUES (${doc.project_id},${actor.id},'document_removed',${JSON.stringify({description:`Removed ${doc.original_name}`})}::jsonb)`;
