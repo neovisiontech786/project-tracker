@@ -20,6 +20,8 @@ export interface Project {
   accent: ProjectAccent;
   onHoldReason?: string;
   archived?: boolean;
+  isPrivate: boolean;
+  isCreator?: boolean;
 }
 export interface ProjectNote {
   id: string;
@@ -53,4 +55,5 @@ export interface ProjectDraft {
   status: ProjectStatus;
   owner: ProjectOwner;
   deadline: string;
+  isPrivate: boolean;
 }
