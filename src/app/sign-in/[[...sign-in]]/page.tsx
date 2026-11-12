@@ -1,10 +1,12 @@
 import { SignIn } from "@clerk/nextjs";
 import Image from "next/image";
 import { CheckCircle2, FolderKanban, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-provider";
 
 export default function SignInPage() {
   return (
     <main className="signin-page hub-login">
+      <ThemeToggle className="login-theme-toggle"/>
       <div className="hub-login-shell">
         <section className="hub-login-story" aria-label="About Neo Vision Tech Project Hub">
           <div className="hub-login-story-content">
