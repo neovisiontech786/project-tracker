@@ -63,7 +63,7 @@ export async function authorize() {
   }
 
   // Store a limited pending-access request without granting any project access.
-  const name=user.fullName?.trim() || user.firstName?.trim() || 'New account';
+  const name=[user.firstName,user.lastName].filter(Boolean).join(' ').trim() || 'New account';
   const pending=await sql`SELECT id FROM users WHERE email=${displayedEmail} AND id<>${userId} LIMIT 1`;
   if(pending.length)throw new AccessError('This email belongs to a different Clerk account. Please use your original sign-in.',403);
   await sql`INSERT INTO users(id,email,display_name,avatar_url,is_active)
