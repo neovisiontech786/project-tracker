@@ -1,5 +1,5 @@
 'use client';
-import {createContext,useCallback,useContext,useEffect,useMemo,useState,type ReactNode} from 'react';
+import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import type {Project,ProjectActivity,ProjectDocument,ProjectDraft,ProjectNote,ProjectStatus} from './types';
 import {useAuth} from '@clerk/nextjs';
 
@@ -27,8 +27,29 @@ const json=(method:string,body:unknown):RequestInit=>({method,headers:{'Content-
 export function ProjectStoreProvider({children}:{children:ReactNode}){
  const [data,setData]=useState<HubData>(EMPTY);
  const [ready,setReady]=useState(false);const [error,setError]=useState('');const {isLoaded,isSignedIn,userId}=useAuth();
- const reload=useCallback(async()=>{try{const result=await api<HubData>('/api/hub');setData(result);setError('');}catch(e){setError(e instanceof Error?e.message:'Unable to load workspace.');throw e;}finally{setReady(true);}},[]);
- useEffect(()=>{if(!isLoaded)return;setData(EMPTY);setError("");setReady(false);if(!isSignedIn||!userId){setReady(true);return;}void reload().catch(()=>{});const refresh=()=>{if(document.visibilityState==="visible")void reload().catch(()=>{});};window.addEventListener("focus",refresh);const id=window.setInterval(refresh,60000);return ()=>{window.removeEventListener("focus",refresh);window.clearInterval(id);};},[reload,isLoaded,isSignedIn,userId]);
+ const activeUserRef=useRef<string|null>(null);
+ const [loadedUserId,setLoadedUserId]=useState<string|null>(null);
+ const reload=useCallback(async()=>{
+   const requestedBy=activeUserRef.current;
+   try{
+     const result=await api<HubData>('/api/hub');
+     if(activeUserRef.current===requestedBy){setData(result);setLoadedUserId(requestedBy);setError('');}
+   }catch(e){
+     if(activeUserRef.current===requestedBy)setError(e instanceof Error?e.message:'Unable to load workspace.');
+     throw e;
+   }finally{if(activeUserRef.current===requestedBy)setReady(true);}
+ },[]);
+ useEffect(()=>{
+   activeUserRef.current=isLoaded?(userId||null):null;
+   setData(EMPTY);setLoadedUserId(null);setError("");setReady(false);
+   if(!isLoaded)return;
+   if(!isSignedIn||!userId){setReady(true);return;}
+   void reload().catch(()=>{});
+   const refresh=()=>{if(document.visibilityState==="visible")void reload().catch(()=>{});};
+   window.addEventListener("focus",refresh);
+   const id=window.setInterval(refresh,60000);
+   return ()=>{window.removeEventListener("focus",refresh);window.clearInterval(id);};
+ },[reload,isLoaded,isSignedIn,userId]);
  const createProject=useCallback(async(draft:ProjectDraft)=>{
    const result=await api<{id:string}>('/api/hub',json('POST',{action:'create',draft}));await reload();return result.id;
  },[reload]);
@@ -59,7 +80,8 @@ export function ProjectStoreProvider({children}:{children:ReactNode}){
  const deleteDocument=useCallback(async(doc:ProjectDocument)=>{
    await api('/api/documents',json('DELETE',{id:doc.id}));await reload();
  },[reload]);
- const value=useMemo(()=>({...data,ready,error,reload,createProject,updateProject,archiveProject,addNote,uploadDocument,openDocument,deleteDocument}),[data,ready,error,reload,createProject,updateProject,archiveProject,addNote,uploadDocument,openDocument,deleteDocument]);
+ const safeData=(isLoaded&&isSignedIn&&userId===loadedUserId)?data:EMPTY;
+ const value=useMemo(()=>({...safeData,ready:ready&&(!isSignedIn||userId===loadedUserId),error,reload,createProject,updateProject,archiveProject,addNote,uploadDocument,openDocument,deleteDocument}),[safeData,ready,error,reload,createProject,updateProject,archiveProject,addNote,uploadDocument,openDocument,deleteDocument,isSignedIn,userId,loadedUserId]);
  return <Hub.Provider value={value}>{children}</Hub.Provider>;
 }
 export function useHub(){const context=useContext(Hub);if(!context)throw new Error('useHub must be within ProjectStoreProvider');return context;}
