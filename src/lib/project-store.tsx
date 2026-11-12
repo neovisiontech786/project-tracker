@@ -81,7 +81,7 @@ export function ProjectStoreProvider({children}:{children:ReactNode}){
    await api('/api/documents',json('DELETE',{id:doc.id}));await reload();
  },[reload]);
  const safeData=(isLoaded&&isSignedIn&&userId===loadedUserId)?data:EMPTY;
- const value=useMemo(()=>({...safeData,ready:ready&&(!isSignedIn||userId===loadedUserId),error,reload,createProject,updateProject,archiveProject,addNote,uploadDocument,openDocument,deleteDocument}),[safeData,ready,error,reload,createProject,updateProject,archiveProject,addNote,uploadDocument,openDocument,deleteDocument,isSignedIn,userId,loadedUserId]);
+ const value=useMemo(()=>({...safeData,ready,error,reload,createProject,updateProject,archiveProject,addNote,uploadDocument,openDocument,deleteDocument}),[safeData,ready,error,reload,createProject,updateProject,archiveProject,addNote,uploadDocument,openDocument,deleteDocument,isSignedIn,userId,loadedUserId]);
  return <Hub.Provider value={value}>{children}</Hub.Provider>;
 }
 export function useHub(){const context=useContext(Hub);if(!context)throw new Error('useHub must be within ProjectStoreProvider');return context;}
