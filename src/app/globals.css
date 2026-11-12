@@ -43,3 +43,49 @@
 .signin-brand-title{font-size:18px;font-weight:750;letter-spacing:-.035em;color:#19213c;margin:-6px 0 10px}
 .signin-foot-logo{display:block;width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid rgba(79,70,229,.18)}
 .brand-row:hover .brand-copy strong{color:#3228ab}
+
+
+/* Project Hub — modern split sign-in screen (official Clerk form on the right) */
+.signin-page.hub-login{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:28px 22px;overflow:hidden;background:radial-gradient(circle at 11% 18%,#e9efff 0,transparent 29%),radial-gradient(circle at 94% 90%,#e9f4ff 0,transparent 34%),#f6f8fd}
+.hub-login:before{content:"";position:absolute;z-index:-1;inset:0;background-image:linear-gradient(rgba(87,111,158,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(87,111,158,.045) 1px,transparent 1px);background-size:34px 34px;mask-image:linear-gradient(90deg,#000,transparent 65%);pointer-events:none}
+.hub-login-shell{width:min(1180px,100%);min-height:680px;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(390px,.92fr);overflow:hidden;background:#fff;border:1px solid #e1e8f4;border-radius:24px;box-shadow:0 32px 85px rgba(21,40,87,.1),0 9px 25px rgba(21,40,87,.06)}
+.hub-login-story{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(148deg,#0b1b45 0%,#112d66 53%,#0e4779 100%);padding:48px clamp(32px,4vw,62px);color:#fff}
+.hub-login-story:before{content:"";position:absolute;z-index:-1;inset:0;background:radial-gradient(circle at 12% 12%,rgba(53,167,255,.23),transparent 37%),radial-gradient(circle at 92% 81%,rgba(99,109,247,.25),transparent 35%);pointer-events:none}
+.hub-login-story:after{content:"";position:absolute;z-index:-1;right:-170px;top:-170px;width:475px;height:475px;border-radius:50%;border:1px solid rgba(173,211,255,.12);box-shadow:0 0 0 44px rgba(173,211,255,.035),0 0 0 97px rgba(173,211,255,.025);pointer-events:none}
+.hub-login-story-content{height:100%;min-height:584px;display:flex;flex-direction:column;position:relative;z-index:1}
+.hub-login-brand{display:flex;align-items:center;gap:16px}
+.hub-login-emblem{height:74px;width:74px;flex-shrink:0;display:grid;place-items:center;border-radius:19px;background:rgba(255,255,255,.09);border:1px solid rgba(173,211,255,.19);box-shadow:0 12px 26px rgba(0,0,0,.15)}
+.hub-login-emblem img{width:66px;height:66px;object-fit:cover;border-radius:15px}
+.hub-login-brand-copy{display:flex;flex-direction:column;gap:1px}
+.hub-login-brand-copy span{font-size:11px;letter-spacing:.18em;font-weight:750;color:#a7d0ff}
+.hub-login-brand-copy strong{font-size:25px;letter-spacing:-.045em;font-weight:720;color:#fff}
+.hub-login-hero{margin-top:58px}
+.hub-login-kicker{width:max-content;max-width:100%;display:flex;align-items:center;gap:8px;border:1px solid rgba(155,200,255,.21);background:rgba(90,159,249,.1);padding:7px 12px;border-radius:999px;color:#c9dfff;font-weight:700;font-size:10px;letter-spacing:.12em}
+.hub-login-kicker span{width:7px;height:7px;background:#62c9ff;border-radius:50%;box-shadow:0 0 0 4px rgba(77,190,255,.12)}
+.hub-login-hero h1{margin:22px 0 16px;font-size:clamp(38px,3.6vw,52px);line-height:1.12;font-weight:750;letter-spacing:-.055em;color:#fff}
+.hub-login-hero h1 span{color:#8ccfff}
+.hub-login-hero>p{font-size:14px;line-height:1.8;color:#d0e0fa;max-width:465px;margin:0}
+.hub-login-benefits{display:grid;gap:12px;margin-top:31px}
+.hub-login-benefit{display:flex;align-items:center;gap:13px;min-height:66px;padding:12px 15px;border:1px solid rgba(195,216,255,.13);border-radius:13px;background:rgba(255,255,255,.064);backdrop-filter:blur(8px)}
+.hub-login-benefit-icon{width:36px;height:36px;flex-shrink:0;display:grid;place-items:center;border-radius:10px;background:rgba(71,157,240,.18);color:#87d2ff}
+.hub-login-benefit strong,.hub-login-benefit span{display:block}
+.hub-login-benefit strong{font-size:13px;color:#fff;line-height:1.4}
+.hub-login-benefit span{font-size:11px;line-height:1.6;margin-top:3px;color:#cfdef7}
+.hub-login-story-footer{margin-top:auto;padding-top:30px;display:flex;align-items:center;gap:8px;font-size:11px;color:#bed1eb}
+.hub-login-story-footer svg{color:#8bd0ff}
+.hub-login-auth{padding:34px clamp(22px,3vw,44px);display:flex;align-items:center;justify-content:center;min-width:0;background:linear-gradient(180deg,#fff,#fcfdff)}
+.hub-login-auth-inner{width:100%;max-width:414px;margin:auto}
+.hub-login-auth-top{text-align:center;margin-bottom:16px}
+.hub-login-auth-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:99px;background:#edf0ff;color:#4741ba;font-size:10px;font-weight:800;letter-spacing:.1em}
+.hub-login-auth-top p{font-size:12px;margin:12px 0 0;color:#77829a}
+.hub-login-clerk{width:100%}
+.hub-login-clerk .cl-rootBox,.hub-login-clerk .cl-cardBox{width:100%;max-width:100%;margin:0 auto}
+.hub-login-clerk .cl-cardBox{box-shadow:none!important}
+.hub-login-clerk .cl-card{width:100%;max-width:100%;box-shadow:none!important;border:0!important;background:transparent!important}
+.hub-login-clerk .cl-headerTitle{color:#172039;font-weight:750;font-size:26px;letter-spacing:-.045em}
+.hub-login-clerk .cl-headerSubtitle{color:#697386}
+.hub-login-clerk .cl-socialButtonsBlockButton,.hub-login-clerk .cl-formFieldInput{border-radius:9px}
+.hub-login-auth-footer{margin:18px 0 0;text-align:center;font-size:11px;line-height:1.6;color:#98a0b2}
+@media(max-width:930px){.hub-login-shell{grid-template-columns:1fr;min-height:unset}.hub-login-story{padding:32px 32px 28px}.hub-login-story-content{min-height:unset}.hub-login-hero{margin-top:24px}.hub-login-hero h1{font-size:36px;margin:14px 0 12px}.hub-login-hero>p{max-width:650px}.hub-login-benefits{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:22px;gap:9px}.hub-login-benefit{align-items:flex-start;flex-direction:column;min-height:unset}.hub-login-story-footer{padding-top:23px}.hub-login-auth{padding:28px}}
+@media(max-width:630px){.signin-page.hub-login{padding:12px}.hub-login-shell{border-radius:17px}.hub-login-story{padding:24px 19px}.hub-login-emblem{height:58px;width:58px;border-radius:14px}.hub-login-emblem img{width:52px;height:52px;border-radius:12px}.hub-login-brand-copy strong{font-size:21px}.hub-login-brand-copy span{font-size:9px}.hub-login-hero{margin-top:20px}.hub-login-hero h1{font-size:31px}.hub-login-hero>p{font-size:12px;line-height:1.65}.hub-login-benefits{grid-template-columns:1fr;margin-top:18px;gap:8px}.hub-login-benefit{flex-direction:row;align-items:center;min-height:unset;padding:10px}.hub-login-benefit-icon{width:31px;height:31px}.hub-login-benefit strong{font-size:12px}.hub-login-benefit span{font-size:10px}.hub-login-story-footer{padding-top:18px;font-size:10px}.hub-login-auth{padding:22px 12px}.hub-login-auth-top{margin-bottom:10px}}
+@media(prefers-reduced-motion:reduce){.hub-login-shell *{scroll-behavior:auto;animation:none!important}}
