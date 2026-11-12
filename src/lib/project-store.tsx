@@ -3,7 +3,7 @@ import {createContext,useCallback,useContext,useEffect,useMemo,useState,type Rea
 import type {Project,ProjectActivity,ProjectDocument,ProjectDraft,ProjectNote,ProjectStatus} from './types';
 import {useAuth} from '@clerk/nextjs';
 
-type HubData={projects:Project[];notes:ProjectNote[];documents:ProjectDocument[];activity:ProjectActivity[]};
+type HubData={viewerName:string;projects:Project[];notes:ProjectNote[];documents:ProjectDocument[];activity:ProjectActivity[]};
 type HubContext=HubData & {
  ready:boolean;error:string;
  reload:()=>Promise<void>;
@@ -16,7 +16,7 @@ type HubContext=HubData & {
  deleteDocument:(doc:ProjectDocument)=>Promise<void>;
 };
 const Hub=createContext<HubContext|null>(null);
-const EMPTY:HubData={projects:[],notes:[],documents:[],activity:[]};
+const EMPTY:HubData={viewerName:'',projects:[],notes:[],documents:[],activity:[]};
 async function api<T>(url:string,init?:RequestInit):Promise<T>{
  const response=await fetch(url,{cache:'no-store',...init});
  const body=await response.json().catch(()=>({error:'Invalid server response.'}));
