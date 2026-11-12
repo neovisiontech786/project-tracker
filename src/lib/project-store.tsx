@@ -46,8 +46,15 @@ export function ProjectStoreProvider({children}:{children:ReactNode}){
    await api('/api/documents',json('POST',{action:'complete',id:start.id}));await reload();
  },[reload]);
  const openDocument=useCallback(async(doc:ProjectDocument)=>{
-   const {url}=await api<{url:string}>(`/api/documents?id=${encodeURIComponent(doc.id)}`);
-   window.open(url,'_blank','noopener,noreferrer');return true;
+   // Open synchronously from the click event so popup blockers do not prevent downloads.
+   const popup=window.open('about:blank','_blank');
+   if(popup)popup.opener=null;
+   try{
+     const {url}=await api<{url:string}>(`/api/documents?id=${encodeURIComponent(doc.id)}`);
+     if(popup)popup.location.replace(url);
+     else window.location.assign(url);
+     return true;
+   }catch(e){popup?.close();throw e;}
  },[]);
  const deleteDocument=useCallback(async(doc:ProjectDocument)=>{
    await api('/api/documents',json('DELETE',{id:doc.id}));await reload();
