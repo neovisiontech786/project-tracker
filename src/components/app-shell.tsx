@@ -9,7 +9,7 @@ import { NewProjectModal } from "./new-project-modal";
 
 const NAV=[{title:"Overview",entries:[{href:"/dashboard",name:"Dashboard",Icon:LayoutGrid},{href:"/projects",name:"All Projects",Icon:FolderKanban},{href:"/projects?view=archived",name:"Archived",Icon:Archive},{href:"/projects?view=private",name:"My Private Projects",Icon:LockKeyhole}]},{title:"Workspace",entries:[{href:"/settings",name:"Settings",Icon:Settings2}]}];
 export function AppShell({children}:{children:React.ReactNode}){
- const path=usePathname(); const router=useRouter(); const {projects,error,ready}=useHub();const {user}=useUser();
+ const path=usePathname(); const router=useRouter(); const {projects,error,ready,reload}=useHub();const {user}=useUser();
  const [mobileOpen,setMobileOpen]=useState(false); const [newOpen,setNewOpen]=useState(false);const [searchOpen,setSearchOpen]=useState(false);const [term,setTerm]=useState("");
  const activeCount=projects.filter(p=>!p.archived&&p.status==="In Progress").length;
  const searchable=projects.filter(p=>!p.archived&&(`${p.name} ${p.client}`).toLowerCase().includes(term.toLowerCase())).slice(0,5);
