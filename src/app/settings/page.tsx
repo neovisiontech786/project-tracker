@@ -1,13 +1,15 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { DatabaseZap, LockKeyhole, RefreshCcw, Shield, UsersRound, UserCheck, AlertCircle } from "lucide-react";
+import { DatabaseZap, LockKeyhole, RefreshCcw, Shield, UsersRound, UserCheck, AlertCircle, Monitor, Moon, Sun } from "lucide-react";
 import { useHub } from "@/lib/project-store";
+import { useTheme, type ThemePreference } from "@/components/theme-provider";
 
 type PendingUser={id:string;email:string;display_name:string;created_at:string};
 type Founder={email:string;display_name:string};
 
 export default function SettingsPage(){
  const {reload,viewerName}=useHub();
+ const {preference,resolvedTheme,setPreference}=useTheme();
  const [pending,setPending]=useState<PendingUser[]>([]);
  const [members,setMembers]=useState<Founder[]>([]);
  const [error,setError]=useState("");
@@ -39,6 +41,29 @@ export default function SettingsPage(){
  return <div className="page-container settings-page">
    <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line"/>PREFERENCES</div>
      <h1>Workspace settings</h1><p>Manage your private, two-founder workspace.</p></div></div>
+   <section className="surface-card appearance-settings">
+      <div className="settings-heading">
+        <span className="settings-icon"><Sun size={20}/></span>
+        <div><h2>Appearance</h2><p>Choose a comfortable, high-contrast theme for your workspace.</p></div>
+      </div>
+      <fieldset className="theme-options">
+        <legend className="sr-only">Choose workspace theme</legend>
+        {([
+          {value:"light",label:"Light",description:"Bright and clear",Icon:Sun},
+          {value:"dark",label:"Dark",description:"Easy on the eyes",Icon:Moon},
+          {value:"system",label:"System",description:"Follow your device",Icon:Monitor}
+        ] as const).map(({value,label,description,Icon})=>
+          <label className={`theme-option ${preference===value?"is-selected":""}`} key={value}>
+            <input type="radio" name="workspace-theme" value={value} checked={preference===value}
+              onChange={()=>setPreference(value as ThemePreference)}/>
+            <Icon size={20} strokeWidth={1.85}/>
+            <strong>{label}</strong>
+            <span>{description}</span>
+          </label>
+        )}
+      </fieldset>
+      <p className="theme-current">Currently displaying: <strong>{resolvedTheme === "dark" ? "Dark mode" : "Light mode"}</strong>. Your preference is remembered on this device.</p>
+    </section>
    <div className="settings-grid">
     <section className="surface-card settings-card">
       <div className="settings-heading"><span className="settings-icon"><UsersRound size={20}/></span><div><h2>Team members</h2><p>Two founders with equal project access.</p></div></div>
