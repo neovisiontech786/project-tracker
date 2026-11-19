@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import "./dark.css";
+import "./finance.css";
 import { ProjectStoreProvider } from "@/lib/project-store";
 import { AppFrame } from "@/components/app-frame";
 import { ThemeProvider } from "@/components/theme-provider";
