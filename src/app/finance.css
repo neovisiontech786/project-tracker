@@ -11,3 +11,23 @@ html[data-theme="dark"] .payment-shell,html[data-theme="dark"] .payments-overvie
 @media(max-width:1150px){.payment-metrics,.payment-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.payment-overview-columns{grid-template-columns:1fr}.payment-overview-aside{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.payment-section-head,.payment-heading{flex-direction:column}.payment-ledgers,.payment-founder-grid,.payment-overview-aside{grid-template-columns:1fr}.payment-entry-form{grid-template-columns:1fr}.payment-entry-form .payment-wide,.payment-form-actions{grid-column:auto}.payment-section-head h2{font-size:19px}.payment-head-actions{width:100%}.payment-head-actions .btn{flex:1}}
 @media(max-width:460px){.payment-metrics,.payment-summary-grid{grid-template-columns:1fr}.payment-metric,.payment-summary-card{padding:15px}.payment-entry-card{padding:15px}.payment-ledger-title{padding:14px 12px}.payment-ledger-list{padding:5px 12px}.payment-form-actions{flex-wrap:wrap}}
+
+
+/* Visible, keyboard-reachable finance dialogs in both themes */
+.payment-modal-container,.payment-quote-modal{padding:18px 22px 22px;background:var(--pay-surface)}
+.payment-quote-modal .payment-inline-form{align-items:end}
+.payment-quote-modal .payment-inline-form label{flex:1;min-width:190px}
+.payment-modal-container .payment-feedback,.payment-quote-modal .payment-feedback{margin-bottom:16px}
+.payment-modal-container .payment-entry-form{gap:14px}
+.payment-modal-container .payment-entry-form input:focus-visible,
+.payment-modal-container .payment-entry-form select:focus-visible,
+.payment-modal-container .payment-entry-form textarea:focus-visible,
+.payment-quote-modal input:focus-visible{outline:2px solid var(--pay-accent);outline-offset:1px}
+.payment-modal-container .payment-form-actions{padding-top:6px}
+.payment-modal-container input[readonly]{opacity:.8;background:var(--pay-surface-alt)}
+@media(max-width:760px){
+ .payment-modal-container,.payment-quote-modal{padding:16px}
+ .payment-quote-modal .payment-inline-form{display:grid;grid-template-columns:1fr 1fr;width:100%}
+ .payment-quote-modal .payment-inline-form label{grid-column:1/-1;min-width:0}
+ .payment-quote-modal .payment-inline-form button{justify-content:center}
+}
