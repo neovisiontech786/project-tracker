@@ -64,7 +64,18 @@ export function currentLocalDatetime() {
   return local.toISOString().slice(0, 16);
 }
 export async function financeRequest<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { cache: "no-store", credentials: "same-origin", ...init });
+  // A suspended database can take time to wake up. Never leave users in an
+  // endless loading state if a network request hangs.
+  const timeout = AbortSignal.timeout(25000);
+  const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
+  let response: Response;
+  try {
+    response = await fetch(url, { cache: "no-store", credentials: "same-origin", ...init, signal });
+  } catch (error) {
+    if (timeout.aborted) throw new Error("Payments are taking too long to load. Please try again.");
+    if (error instanceof Error && error.name === "AbortError") throw error;
+    throw new Error("Unable to contact the payment service. Check your connection and retry.");
+  }
   const body = await response.json().catch(() => ({ error: "Unexpected server response." }));
   if (!response.ok) throw new Error(body.error || `Request failed (${response.status}).`);
   return body as T;
