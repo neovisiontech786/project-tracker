@@ -4,29 +4,38 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowDownLeft, ArrowLeftRight, ArrowRight, CheckCircle2, CircleDollarSign, IndianRupee, ReceiptText, Wallet } from "lucide-react";
 import { useHub } from "@/lib/project-store";
+import { useAuth } from "@clerk/nextjs";
 import {
   activeReceipts, activeTransfers, duePaise, financeRequest, heldBy,
   money, sumPaise, transactionDate, type FinancePayload,
 } from "@/lib/finance";
 
 export default function PaymentsPage() {
-  const { projects, ready, viewerName } = useHub();
+  const { projects, ready } = useHub();
+  const { isLoaded, isSignedIn, userId } = useAuth();
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [data, setData] = useState<FinancePayload | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let active = true;
-    setLoading(true); setData(null); setError("");
+    setLoading(true); setData(null); setLoadedFor(null); setError("");
+    if (!isLoaded) return () => { active = false; };
+    if (!isSignedIn || !userId) { setLoading(false); return () => { active = false; }; }
     financeRequest<FinancePayload>("/api/payments")
-      .then(result => { if (active) setData(result); })
+      .then(result => {
+        if (active) { setData(result); setLoadedFor(userId); }
+      })
       .catch(e => { if (active) setError(e instanceof Error ? e.message : "Could not load payments."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [viewerName]);
+  }, [isLoaded, isSignedIn, userId]);
+  // Never render a previous founder's private financial data after account switch.
+  const safeData = isSignedIn && loadedFor === userId ? data : null;
   const visibleProjects = projects; // Financial history includes completed and archived projects.
-  const financials = data?.finance || [];
-  const receipts = activeReceipts(data?.receipts || []);
-  const transfers = activeTransfers(data?.transfers || []);
+  const financials = safeData?.finance || [];
+  const receipts = activeReceipts(safeData?.receipts || []);
+  const transfers = activeTransfers(safeData?.transfers || []);
   const quoteByProject = new Map(financials.map(f => [f.projectId, f.quotedPaise]));
   const receivedByProject = new Map<string, number>();
   receipts.forEach(r => receivedByProject.set(r.projectId, (receivedByProject.get(r.projectId) || 0) + r.amountPaise));
@@ -42,10 +51,10 @@ export default function PaymentsPage() {
     <div className="page-heading payment-heading"><div><div className="eyebrow"><span className="eyebrow-line"/>PROJECT FINANCES</div><h1>Payments &amp; Collections</h1><p>Quotations, client receipts, outstanding dues and founder settlements.</p></div><span className="payment-workspace-tag">₹ INR · Projects visible to you</span></div>
     {(loading || !ready) && <div className="surface-card payment-empty">Loading your finance dashboard…</div>}
     {error && <div className="payment-feedback error" role="alert">{error}</div>}
-    {data && ready && <>
+    {safeData && ready && <>
       <div className="payment-summary-grid">
         {[
-          {label:"Total quoted",amount:quoteTotal,Icon:CircleDollarSign,help:`Across ${visibleProjects.length} active project(s)`},
+          {label:"Total quoted",amount:quoteTotal,Icon:CircleDollarSign,help:`Across ${visibleProjects.length} tracked project(s)`},
           {label:"Received from clients",amount:receivedTotal,Icon:ArrowDownLeft,help:`${receipts.length} recorded client payments`},
           {label:"Yet to receive",amount:dueTotal,Icon:Wallet,help:"Remaining amounts on quoted projects"},
           {label:"Founder transfers",amount:sumPaise(transfers),Icon:ArrowLeftRight,help:"Internal transfers, not extra income"},
