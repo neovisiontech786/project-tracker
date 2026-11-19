@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm test && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:finance": "node --experimental-strip-types --test tests/finance.test.mjs"
+    "test:finance": "node --experimental-strip-types --test tests/finance.test.mjs",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
     "next": "16.4.6",
