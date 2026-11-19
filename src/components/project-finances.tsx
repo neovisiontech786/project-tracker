@@ -101,7 +101,7 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
     finally { setSaving(false); }
   }
   if (loading) return <div className="payment-shell"><div className="surface-card payment-empty">Loading payment records…</div></div>;
-  if (!data) return <div className="payment-shell"><div className="surface-card payment-empty">{error || "Could not load payment information."}<button type="button" className="btn btn-secondary" onClick={() => { setLoading(true); void load().finally(() => setLoading(false)); }}>Retry</button></div></div>;
+  if (!data) return <div className="payment-shell"><div className="surface-card payment-empty">{error || "Could not load payment information."}<button type="button" className="btn btn-secondary" onClick={() => { setError(""); setLoading(true); void load().catch(e => setError(e instanceof Error ? e.message : "Unable to load payments.")).finally(() => setLoading(false)); }}>Retry</button></div></div>;
   return <div className="payment-shell">
     <div className="payment-section-head">
       <div><h2>Project payments</h2><p>Quotations, client receipts and founder settlements — all in INR.</p></div>
