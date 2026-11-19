@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowDownLeft, ArrowLeftRight, Banknote, CheckCircle2, CircleHelp, IndianRupee, PencilLine, Plus, ReceiptText, ShieldCheck, X } from "lucide-react";
 import { Modal } from "@/components/ui";
+import { useAuth } from "@clerk/nextjs";
 import {
   activeReceipts, activeTransfers, currentLocalDatetime, duePaise, financeMutation,
   financeRequest, heldBy, money, moneyInput, PAYMENT_METHODS, sumPaise, transactionDate,
@@ -10,6 +11,11 @@ import {
 } from "@/lib/finance";
 
 export function ProjectFinances({ projectId, viewerName }: { projectId: string; viewerName: string }) {
+  const { userId } = useAuth();
+  const scope = `${userId || "guest"}:${projectId}`;
+  const currentScope = useRef(scope);
+  currentScope.current = scope;
+  const [loadedScope, setLoadedScope] = useState("");
   const [data, setData] = useState<FinancePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,25 +35,28 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
   const [showVoided, setShowVoided] = useState(false);
 
   const load = useCallback(async () => {
+    const requestedScope = scope;
     const next = await financeRequest<FinancePayload>(`/api/payments?projectId=${encodeURIComponent(projectId)}`);
-    setData(next);
+    if (currentScope.current === requestedScope) { setData(next); setLoadedScope(requestedScope); }
     return next;
-  }, [projectId]);
+  }, [projectId, scope]);
 
   useEffect(() => {
     let active = true;
-    setLoading(true); setError(""); setData(null); setQuoteEditing(false);
+    setLoading(true); setError(""); setData(null); setLoadedScope(""); setQuoteEditing(false);
+    if (!userId) { setLoading(false); return () => { active = false; }; }
     financeRequest<FinancePayload>(`/api/payments?projectId=${encodeURIComponent(projectId)}`)
-      .then(result => { if (active) setData(result); })
+      .then(result => { if (active) { setData(result); setLoadedScope(scope); } })
       .catch(err => { if (active) setError(err instanceof Error ? err.message : "Unable to load payments."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [projectId]);
+  }, [projectId, scope, userId]);
 
-  const finance = data?.finance.find(x => x.projectId === projectId);
+  const safeData = loadedScope === scope ? data : null;
+  const finance = safeData?.finance.find(x => x.projectId === projectId);
   const quote = finance?.quotedPaise ?? null;
-  const receipts = data?.receipts || [];
-  const transfers = data?.transfers || [];
+  const receipts = (safeData?.receipts || []).filter(r => r.projectId === projectId);
+  const transfers = (safeData?.transfers || []).filter(t => t.projectId === projectId);
   const activeClientPayments = activeReceipts(receipts);
   const activeFounders = activeTransfers(transfers);
   const received = sumPaise(activeClientPayments);
@@ -101,8 +110,8 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
     } catch(e) { setError(e instanceof Error ? e.message : "Correction failed."); }
     finally { setSaving(false); }
   }
-  if (loading) return <div className="payment-shell"><div className="surface-card payment-empty">Loading payment records…</div></div>;
-  if (!data) return <div className="payment-shell"><div className="surface-card payment-empty">{error || "Could not load payment information."}<button type="button" className="btn btn-secondary" onClick={() => { setError(""); setLoading(true); void load().catch(e => setError(e instanceof Error ? e.message : "Unable to load payments.")).finally(() => setLoading(false)); }}>Retry</button></div></div>;
+  if (loading || (!safeData && !error)) return <div className="payment-shell"><div className="surface-card payment-empty">Loading payment records…</div></div>;
+  if (!safeData) return <div className="payment-shell"><div className="surface-card payment-empty">{error || "Could not load payment information."}<button type="button" className="btn btn-secondary" onClick={() => { setError(""); setLoading(true); void load().catch(e => setError(e instanceof Error ? e.message : "Unable to load payments.")).finally(() => setLoading(false)); }}>Retry</button></div></div>;
   return <div className="payment-shell">
     <div className="payment-section-head">
       <div><h2>Project payments</h2><p>Quotations, client receipts and founder settlements — all in INR.</p></div>
