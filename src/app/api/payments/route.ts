@@ -132,8 +132,14 @@ export async function POST(request: Request) {
           ) SELECT id FROM inserted
         `;
         if (result.length === 0) {
-          const existing = await sql`SELECT project_id FROM client_receipts WHERE request_id=${requestId} LIMIT 1`;
-          if (existing.length !== 1 || existing[0].project_id !== projectId) throw new AccessError("Duplicate payment request.", 409);
+          const existing = await sql`SELECT project_id,amount_paise,paid_at,method,received_by,reference,note,voided_at FROM client_receipts WHERE request_id=${requestId} LIMIT 1`;
+          if (existing.length !== 1 || String(existing[0].project_id) !== projectId ||
+              Number(existing[0].amount_paise) !== amount ||
+              new Date(String(existing[0].paid_at)).getTime() !== new Date(paidAt).getTime() ||
+              String(existing[0].method) !== method || String(existing[0].received_by) !== receivedBy ||
+              (existing[0].reference ?? null) !== reference || (existing[0].note ?? null) !== note ||
+              existing[0].voided_at !== null)
+            throw new AccessError("This payment request ID was already used for another entry. Refresh the form and try again.", 409);
         }
         return reply({ success: true, idempotent: result.length === 0 });
       }
@@ -154,8 +160,15 @@ export async function POST(request: Request) {
         ) SELECT id FROM inserted
       `;
       if (result.length === 0) {
-        const existing = await sql`SELECT project_id FROM founder_transfers WHERE request_id=${requestId} LIMIT 1`;
-        if (existing.length !== 1 || existing[0].project_id !== projectId) throw new AccessError("Duplicate transfer request.", 409);
+        const existing = await sql`SELECT project_id,amount_paise,transferred_at,method,from_founder,to_founder,reference,note,voided_at FROM founder_transfers WHERE request_id=${requestId} LIMIT 1`;
+        if (existing.length !== 1 || String(existing[0].project_id) !== projectId ||
+            Number(existing[0].amount_paise) !== amount ||
+            new Date(String(existing[0].transferred_at)).getTime() !== new Date(transferredAt).getTime() ||
+            String(existing[0].method) !== method || String(existing[0].from_founder) !== fromFounder ||
+            String(existing[0].to_founder) !== toFounder ||
+            (existing[0].reference ?? null) !== reference || (existing[0].note ?? null) !== note ||
+            existing[0].voided_at !== null)
+          throw new AccessError("This transfer request ID was already used for another entry. Refresh the form and try again.",409);
       }
       return reply({ success: true, idempotent: result.length === 0 });
     }
