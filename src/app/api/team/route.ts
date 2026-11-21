@@ -14,7 +14,7 @@ export async function GET(){
   const [members,invitations]=await Promise.all([
     sql`SELECT id,display_name AS name,email,role,is_active AS active,
           revoked_at,removed_at,created_at FROM users ORDER BY created_at`,
-    sql`SELECT id,email,display_name AS name,role,status,created_at
+    sql`SELECT id,email,display_name AS name,role,status,expires_at,created_at
       FROM team_invitations WHERE status IN ('pending','sent','failed') ORDER BY created_at DESC`
   ]);
   return json({members,invitations,viewerId:actor.id});
@@ -33,8 +33,8 @@ export async function POST(request:Request){
     validate(name.length>=2,'Enter a team member name.');
     const existing=await sql`SELECT id FROM users WHERE email=${email} LIMIT 1`;
     if(existing.length)throw new AccessError('An account already uses this email. Edit its access instead.',409);
-    const previous=await sql`SELECT id,status FROM team_invitations WHERE email=${email} LIMIT 1`;
-    if(previous.length && previous[0].status==='sent')throw new AccessError('An invitation has already been sent to this address.',409);
+    const previous=await sql`SELECT id,status,expires_at FROM team_invitations WHERE email=${email} LIMIT 1`;
+    if(previous.length && previous[0].status==='sent' && new Date(String(previous[0].expires_at)).getTime()>Date.now())throw new AccessError('An invitation has already been sent to this address.',409);
     await sql`INSERT INTO team_invitations(email,display_name,role,invited_by_id,status)
       VALUES (${email},${name},${newRole},${actor.id},'pending')
       ON CONFLICT(email) DO UPDATE SET display_name=EXCLUDED.display_name,
