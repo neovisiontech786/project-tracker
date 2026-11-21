@@ -45,6 +45,7 @@ export async function POST(request:Request){
       const clerk=await clerkClient();
       const invitation=await clerk.invitations.createInvitation({
         emailAddress:email,
+        ignoreExisting:true,
         redirectUrl:new URL('/sign-up',request.url).toString()
       });
       await sql`UPDATE team_invitations SET status='sent',clerk_invitation_id=${invitation.id},updated_at=now()
