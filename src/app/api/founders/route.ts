@@ -1,4 +1,5 @@
-import { authorize, database, errorResponse, AccessError, validate } from '@/lib/server';
+import { clerkClient } from '@clerk/nextjs/server';
+import { authorize, database, errorResponse, AccessError, validate, assertSameOrigin } from '@/lib/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,7 @@ export async function GET() {
     await requireKabir();
     const sql = database();
     const pending = await sql`SELECT id, email, display_name, created_at FROM users
-      WHERE is_active=false ORDER BY created_at DESC LIMIT 25`;
+      WHERE is_active=false AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 25`;
     const members = await sql`SELECT email, display_name FROM users
       WHERE is_active=true AND display_name IN ('Kabir','Naushad') ORDER BY display_name`;
     return Response.json({pending,members},{headers:{'Cache-Control':'no-store'}});
@@ -26,19 +27,27 @@ export async function GET() {
 // permitting arbitrary public sign-ups or requiring an unrestricted email list.
 export async function POST(request:Request) {
   try {
+    assertSameOrigin(request);
     const actor=await requireKabir();
     const body = await request.json();
     validate(body && body.action==='approve' && typeof body.userId==='string' && /^user_[a-zA-Z0-9]{8,80}$/.test(body.userId),'Invalid request.');
     const sql=database();
-    const pending=await sql`SELECT id,email FROM users WHERE id=${body.userId} AND is_active=false LIMIT 1`;
+    const pending=await sql`SELECT id,email FROM users WHERE id=${body.userId} AND is_active=false AND revoked_at IS NULL LIMIT 1`;
     if(pending.length!==1)throw new AccessError('The pending request was not found or was already approved.',404);
+    // Recheck the live Clerk account and verified email at approval time.
+    const clerk=await clerkClient();
+    const applicant=await clerk.users.getUser(body.userId);
+    const verified=applicant.emailAddresses.some(e=>
+      e.verification?.status==='verified' &&
+      e.emailAddress.trim().toLowerCase()===String(pending[0].email).trim().toLowerCase());
+    if(!verified)throw new AccessError('The pending Clerk account does not own this verified email address.',403);
     const occupied=await sql`SELECT id FROM users
       WHERE display_name='Naushad' AND is_active=true LIMIT 1`;
     if(occupied.length)throw new AccessError('The Naushad founder account is already active.',409);
     // Atomic approval: either the founder, memberships and audit event all persist, or none do.
     await sql.transaction([
       sql`UPDATE users SET display_name='Naushad',is_active=true,updated_at=now()
-        WHERE id=${body.userId} AND is_active=false`,
+        WHERE id=${body.userId} AND is_active=false AND revoked_at IS NULL`,
       sql`INSERT INTO project_members(project_id,user_id)
         SELECT p.id,${body.userId} FROM projects p
         WHERE (p.owner_selection='Both' OR p.owner_selection='Naushad')

@@ -15,6 +15,7 @@ import {
   uuid,
   varchar,
   boolean,
+  bigint,
 } from "drizzle-orm/pg-core";
 
 // Auth is handled by Clerk. This is the app's two-user profile/allowlist table.
@@ -25,6 +26,7 @@ export const users = pgTable("users", {
   displayName: varchar("display_name", { length: 120 }).notNull(),
   avatarUrl: text("avatar_url"),
   isActive: boolean("is_active").notNull().default(true),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
@@ -63,6 +65,7 @@ export const projects = pgTable(
     ownerSelection: varchar("owner_selection", { length: 16 }).notNull().default("Both"),
     progress: integer("progress").notNull().default(0),
     isPrivate: boolean("is_private").notNull().default(false),
+    creationRequestId: uuid("creation_request_id"),
     startDate: date("start_date", { mode: "string" }),
     dueDate: date("due_date", { mode: "string" }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
@@ -80,6 +83,9 @@ export const projects = pgTable(
   },
   (t) => [
     check("projects_progress_range", sql`${t.progress} BETWEEN 0 AND 100`),
+    check("projects_not_started_zero", sql`${t.status} <> 'not_started' OR ${t.progress}=0`),
+    check("projects_progress_100_completed", sql`${t.progress} <> 100 OR ${t.status}='completed'`),
+    uniqueIndex("projects_creation_request_idx").on(t.creationRequestId).where(sql`${t.creationRequestId} IS NOT NULL`),
     check(
       "projects_completed_progress",
       sql`${t.status} <> 'completed' OR ${t.progress} = 100`,
@@ -213,6 +219,59 @@ export const activityLogs = pgTable(
     index("activity_logs_project_created_idx").on(t.projectId, t.createdAt),
   ],
 );
+
+// Company finance is stored in whole paise as bigint to avoid floating-point money.
+export const projectFinancials=pgTable("project_financials",{
+  projectId:uuid("project_id").primaryKey().references(()=>projects.id,{onDelete:"cascade"}),
+  quotedPaise:bigint("quoted_paise",{mode:"number"}),
+  quotedUpdatedBy:varchar("quoted_updated_by",{length:255}).references(()=>users.id,{onDelete:"set null"}),
+  quotedUpdatedAt:timestamp("quoted_updated_at",{withTimezone:true}),
+  createdAt:timestamp("created_at",{withTimezone:true}).notNull().defaultNow()
+});
+
+export const clientReceipts=pgTable("client_receipts",{
+  id:uuid("id").defaultRandom().primaryKey(),
+  requestId:uuid("request_id").notNull().unique(),
+  projectId:uuid("project_id").notNull().references(()=>projects.id,{onDelete:"cascade"}),
+  amountPaise:bigint("amount_paise",{mode:"number"}).notNull(),
+  paidAt:timestamp("paid_at",{withTimezone:true}).notNull(),
+  method:text("method").notNull(),
+  receivedBy:text("received_by").notNull(),
+  reference:text("reference"),
+  note:text("note"),
+  recordedById:varchar("recorded_by_id",{length:255}).notNull().references(()=>users.id,{onDelete:"restrict"}),
+  createdAt:timestamp("created_at",{withTimezone:true}).notNull().defaultNow(),
+  voidedAt:timestamp("voided_at",{withTimezone:true}),
+  voidedById:varchar("voided_by_id",{length:255}).references(()=>users.id,{onDelete:"set null"}),
+  voidReason:text("void_reason")
+},t=>[index("idx_client_receipts_project_date").on(t.projectId,t.paidAt)]);
+
+export const founderTransfers=pgTable("founder_transfers",{
+  id:uuid("id").defaultRandom().primaryKey(),
+  requestId:uuid("request_id").notNull().unique(),
+  projectId:uuid("project_id").notNull().references(()=>projects.id,{onDelete:"cascade"}),
+  amountPaise:bigint("amount_paise",{mode:"number"}).notNull(),
+  transferredAt:timestamp("transferred_at",{withTimezone:true}).notNull(),
+  method:text("method").notNull(),
+  fromFounder:text("from_founder").notNull(),
+  toFounder:text("to_founder").notNull(),
+  reference:text("reference"),
+  note:text("note"),
+  recordedById:varchar("recorded_by_id",{length:255}).notNull().references(()=>users.id,{onDelete:"restrict"}),
+  createdAt:timestamp("created_at",{withTimezone:true}).notNull().defaultNow(),
+  voidedAt:timestamp("voided_at",{withTimezone:true}),
+  voidedById:varchar("voided_by_id",{length:255}).references(()=>users.id,{onDelete:"set null"}),
+  voidReason:text("void_reason")
+},t=>[index("idx_founder_transfers_project_date").on(t.projectId,t.transferredAt)]);
+
+export const founderAccessEvents=pgTable("founder_access_events",{
+  id:uuid("id").defaultRandom().primaryKey(),
+  actorId:varchar("actor_id",{length:255}).notNull().references(()=>users.id,{onDelete:"restrict"}),
+  subjectId:varchar("subject_id",{length:255}).notNull().references(()=>users.id,{onDelete:"restrict"}),
+  action:varchar("action",{length:80}).notNull(),
+  details:jsonb("details").$type<Record<string,unknown>>().notNull().default(sql`'{}'::jsonb`),
+  createdAt:timestamp("created_at",{withTimezone:true}).notNull().defaultNow()
+},t=>[index("founder_access_events_subject_created_idx").on(t.subjectId,t.createdAt)]);
 
 // Relational query helpers (all access control still belongs in server code).
 export const usersRelations = relations(users, ({ many }) => ({
