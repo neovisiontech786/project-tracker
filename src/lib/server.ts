@@ -75,16 +75,28 @@ export async function authorize():Promise<TeamActor> {
   const invite=invitation[0];
   const conflicting=await sql`SELECT id,removed_at,revoked_at FROM users WHERE email=${invite.email} AND id<>${userId} LIMIT 1`;
   if(conflicting.length)throw new AccessError('This email belongs to another workspace account. Contact an administrator.',403);
-  await sql.transaction([
-    sql`INSERT INTO users(id,email,display_name,avatar_url,role,is_active,revoked_at,removed_at)
-      VALUES (${userId},${invite.email},${invite.display_name},${clerkUser.imageUrl||null},${invite.role},true,null,null)
+  // Lock and consume the invitation in the same SQL statement as activation.
+  // A simultaneous revoke or second account claim cannot activate an uninvited user.
+  const claimed=await sql`
+    WITH invite AS (
+      SELECT id,email,display_name,role FROM team_invitations
+      WHERE id=${invite.id} AND status='sent' FOR UPDATE
+    ), activated AS (
+      INSERT INTO users(id,email,display_name,avatar_url,role,is_active,revoked_at,removed_at)
+        SELECT ${userId},email,display_name,${clerkUser.imageUrl||null},role,true,null,null FROM invite
       ON CONFLICT(id) DO UPDATE SET
         email=EXCLUDED.email,display_name=EXCLUDED.display_name,avatar_url=EXCLUDED.avatar_url,
         role=EXCLUDED.role,is_active=true,updated_at=now()
-      WHERE users.revoked_at IS NULL AND users.removed_at IS NULL`,
-    sql`UPDATE team_invitations SET status='accepted',accepted_by_id=${userId},updated_at=now()
-      WHERE id=${invite.id} AND status='sent'`
-  ]);
+      WHERE users.revoked_at IS NULL AND users.removed_at IS NULL
+      RETURNING id
+    ), accepted AS (
+      UPDATE team_invitations SET status='accepted',accepted_by_id=${userId},updated_at=now()
+      WHERE id IN (SELECT id FROM invite) AND EXISTS(SELECT id FROM activated)
+      RETURNING id
+    ) SELECT id FROM accepted`;
+  if(!claimed.length)throw new AccessError('This invitation has already been used or revoked.',409);
+  await sql`INSERT INTO founder_access_events(actor_id,subject_id,action,details)
+    VALUES (${userId},${userId},'team_invitation_accepted',jsonb_build_object('role',${invite.role}))`;
   const active=await sql`SELECT role,display_name FROM users WHERE id=${userId} AND is_active=true AND revoked_at IS NULL AND removed_at IS NULL`;
   if(!active.length)throw new AccessError('Your invitation cannot activate this account.',403);
   await sql`INSERT INTO project_members(project_id,user_id)
