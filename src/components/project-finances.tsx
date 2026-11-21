@@ -33,6 +33,7 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
   const [method, setMethod] = useState("Google Pay");
   const [receivedBy, setReceivedBy] = useState<FounderName>(defaultHolder);
   const [fromFounder, setFromFounder] = useState<FounderName>(defaultHolder);
+  const [toFounder, setToFounder] = useState<FounderName>("");
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
   const requestId = useRef<string | null>(null);
@@ -81,7 +82,7 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
   function openForm(next: "receipt" | "transfer") {
     setForm(next); setAmount(""); setDate(currentLocalDatetime()); setMethod("Google Pay");
     setReceivedBy(defaultHolder);
-    setFromFounder(defaultHolder);
+    setFromFounder(defaultHolder);setToFounder(holders.find(m=>m.id!==defaultHolder)?.id||"");
     setReference(""); setNote(""); setMessage(""); setError(""); requestId.current = null;
   }
   function closeForm() { setForm(null); requestId.current = null; setError(""); }
@@ -95,7 +96,7 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
       if (Number.isNaN(timestamp.getTime())) throw new Error("Please choose a valid transaction date and time.");
       const common = { projectId, amount: amount.trim(), method, reference: reference.trim(), note: note.trim(), requestId: requestId.current };
       if (form === "receipt") await financeMutation({ action: "receipt", ...common, paidAt: timestamp.toISOString(), receivedBy });
-      else await financeMutation({ action: "transfer", ...common, transferredAt: timestamp.toISOString(), fromFounder, toFounder: holders.find(m=>m.id!==fromFounder)?.id||"" });
+      else await financeMutation({ action: "transfer", ...common, transferredAt: timestamp.toISOString(), fromFounder, toFounder });
       await load();
       setMessage(form === "receipt" ? "Client payment recorded successfully." : "Founder transfer recorded successfully.");
       closeForm();
@@ -138,7 +139,7 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
       <label>Amount (₹) *<input type="text" inputMode="decimal" placeholder="10000.00" required value={amount} onChange={e => editField(setAmount, e.target.value)}/></label>
       <label>Date and time *<input type="datetime-local" required value={date} max={currentLocalDatetime()} onChange={e => editField(setDate, e.target.value)}/></label>
       <label>Payment method *<select value={method} onChange={e => editField(setMethod, e.target.value)}>{PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}</select></label>
-      {form === "receipt" ? <label>Received by *<select value={receivedBy} onChange={e => {setReceivedBy(e.target.value as FounderName);requestId.current=null;}}>{holders.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label> : <><label>Sent by *<select value={fromFounder} onChange={e => {setFromFounder(e.target.value as FounderName);requestId.current=null;}}>{holders.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label><label>Received by<input readOnly value={holders.find(m=>m.id!==fromFounder)?.name||"No other founder"}/></label></>}
+      {form === "receipt" ? <label>Received by *<select value={receivedBy} onChange={e => {setReceivedBy(e.target.value as FounderName);requestId.current=null;}}>{holders.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label> : <><label>Sent by *<select value={fromFounder} onChange={e => {setFromFounder(e.target.value);setToFounder(holders.find(m=>m.id!==e.target.value)?.id||"");requestId.current=null;}}>{holders.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label><label>Received by *<select value={toFounder} required onChange={e=>{setToFounder(e.target.value);requestId.current=null;}}>{holders.filter(m=>m.id!==fromFounder).map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label></>}
       <label>Reference / transaction ID<input value={reference} maxLength={150} onChange={e => editField(setReference,e.target.value)} placeholder="Optional reference"/></label>
       <label className="payment-wide">Note<textarea value={note} maxLength={1000} onChange={e => editField(setNote,e.target.value)} rows={2} placeholder="Optional details"/></label>
       <div className="payment-form-actions"><button className="btn btn-secondary" type="button" disabled={saving} onClick={closeForm}>Cancel</button><button className="btn btn-primary" type="submit" disabled={saving}>{saving ? "Saving…" : form === "receipt" ? "Save client payment" : "Save founder transfer"}</button></div>
