@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS team_invitations (
  email varchar(320) NOT NULL UNIQUE,
  display_name varchar(120) NOT NULL,
  role varchar(12) NOT NULL CHECK(role IN ('admin','founder','member')),
+ expires_at timestamptz NOT NULL DEFAULT (now() + interval '30 days'),
  status varchar(12) NOT NULL DEFAULT 'pending'
    CHECK(status IN ('pending','sent','accepted','failed','revoked')),
  clerk_invitation_id varchar(255),
