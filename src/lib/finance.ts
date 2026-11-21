@@ -37,6 +37,7 @@ export interface FounderTransfer {
   voidReason: string | null;
 }
 export interface FinancePayload {
+  participants?: {id:string;name:string;role:string;active:boolean}[];
   finance: ProjectFinance[];
   receipts: ClientReceipt[];
   transfers: FounderTransfer[];
