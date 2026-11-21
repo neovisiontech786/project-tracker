@@ -32,16 +32,33 @@ export async function POST(request:Request){
     if(isPrivate && d.owner!==actor.name)throw new AccessError('Private projects can only be assigned to yourself. Change visibility to Shared to assign another founder.',400);
     const dueDate=d.deadline||null;
     validate(!dueDate||/^\d{4}-\d{2}-\d{2}$/.test(dueDate),'Invalid deadline.');
+    const requestId=uuidCheck(data.requestId);
     const id=randomUUID(),type=projectTypes[d.type as keyof typeof projectTypes];
     const status=statusToDb[d.status as ProjectStatus];
     const progress=d.status==='Completed'?100:0;
-    await sql.transaction([
-      sql`INSERT INTO projects(id,name,description,type,client_name,status,owner_selection,progress,due_date,created_by_id,updated_by_id,completed_at,is_private)
+    // One statement prevents a duplicate project if a successful POST is retried.
+    const created=await sql`
+      WITH inserted AS (
+        INSERT INTO projects(id,name,description,type,client_name,status,owner_selection,progress,due_date,created_by_id,updated_by_id,completed_at,is_private,creation_request_id)
         VALUES (${id},${name},${description},${type},${type==='internal'?null:client},${status},${d.owner},
-        ${progress},${dueDate},${actor.id},${actor.id},${status==='completed'?new Date().toISOString():null},${isPrivate})`,
-      sql`INSERT INTO activity_logs(project_id,actor_id,action,details)
-        VALUES (${id},${actor.id},'project_created',${JSON.stringify({description:isPrivate?'Created a private project':'Created a shared project'})}::jsonb)`
-    ]);
+          ${progress},${dueDate},${actor.id},${actor.id},${status==='completed'?new Date().toISOString():null},${isPrivate},${requestId})
+        ON CONFLICT(creation_request_id) DO NOTHING RETURNING id
+      ), logged AS (
+        INSERT INTO activity_logs(project_id,actor_id,action,details)
+          SELECT id,${actor.id},'project_created',
+          ${JSON.stringify({description:isPrivate?'Created a private project':'Created a shared project'})}::jsonb FROM inserted
+          RETURNING id
+      ) SELECT id FROM inserted`;
+    if(!created.length){
+      const previous=await sql`SELECT id,name,created_by_id,description,owner_selection,status,is_private
+        FROM projects WHERE creation_request_id=${requestId} LIMIT 1`;
+      if(previous.length!==1 || previous[0].created_by_id!==actor.id ||
+          previous[0].name!==name || previous[0].description!==description ||
+          previous[0].owner_selection!==d.owner || previous[0].status!==status ||
+          previous[0].is_private!==isPrivate)
+        throw new AccessError('This project request ID is already in use for different details.',409);
+      return ok({id:previous[0].id,idempotent:true});
+    }
     await syncProjectMemberships(id);
     return ok({id});
   }
