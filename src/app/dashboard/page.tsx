@@ -9,9 +9,9 @@ import { dateCompact, isOverdue } from "@/lib/format";
 import type { ProjectOwner, ProjectStatus } from "@/lib/types";
 
 export default function DashboardPage(){
-  const { projects }=useHub();
-  const [founder,setFounder]=useState<"All"|ProjectOwner>("All");
-  const visible=projects.filter(p=>!p.archived&&(founder==="All"||p.owner===founder||p.owner==="Both"));
+  const { projects,teamMembers }=useHub();
+  const [founder,setFounder]=useState<string>("*");
+  const visible=projects.filter(p=>!p.archived&&(founder==="*"||p.owner===founder||(p.owner==="All"&&teamMembers.some(m=>m.id===founder&&(m.role==="admin"||m.role==="founder")))));
   const count=(s:ProjectStatus)=>visible.filter(p=>p.status===s).length;
   const total=visible.length, active=count("In Progress"), paused=count("On Hold"), completed=count("Completed"), notStarted=count("Not Started");
   const remaining=total-completed-count("Cancelled");
@@ -27,7 +27,7 @@ export default function DashboardPage(){
     {label:"REMAINING",value:remaining,Icon:TrendingUp,type:"remaining",caption:"Not yet completed",progress:total?100*remaining/total:0},
   ];
   return <div className="page-container dashboard-page stitch-dashboard">
-    <div className="dashboard-heading-row"><div><div className="eyebrow"><span className="eyebrow-line"/>PROJECT WORKSPACE</div><h1>Project Overview</h1><p>Track and manage all your projects across development and delivery.</p></div><div className="dashboard-heading-actions"><div className="founder-switch" aria-label="Filter projects by founder">{(["All","Kabir","Naushad"] as const).map(f=><button key={f} className={founder===f?"selected":""} onClick={()=>setFounder(f)}>{f}</button>)}</div><CreateProjectButton/></div></div>
+    <div className="dashboard-heading-row"><div><div className="eyebrow"><span className="eyebrow-line"/>PROJECT WORKSPACE</div><h1>Project Overview</h1><p>Track and manage all your projects across development and delivery.</p></div><div className="dashboard-heading-actions"><div className="founder-switch" aria-label="Filter projects by founder">{[{id:"*",name:"All"},...teamMembers.map(m=>({id:m.id,name:m.name}))].map(f=><button key={f.id} className={founder===f.id?"selected":""} onClick={()=>setFounder(f.id)}>{f.name}</button>)}</div><CreateProjectButton/></div></div>
     <div className="metric-grid six-metrics">{metrics.map(m=><Link href={m.status?`/projects?status=${encodeURIComponent(m.status)}`:"/projects"} className="metric-card" key={m.label}><div className="metric-head"><span>{m.label}</span><div className={`metric-icon metric-${m.type}`}><m.Icon size={16}/></div></div><strong>{m.value}</strong><span className="metric-foot">{m.caption}</span><div className="metric-track"><i style={{width:`${m.progress}%`}} className={`metric-fill metric-fill-${m.type}`}/></div></Link>)}</div>
     <div className="dashboard-columns dashboard-screenshot-grid"><div className="dashboard-primary">
       <section className="surface-card project-overview-card"><div className="card-titlebar"><div><h2>Recent Projects <span className="small-count">{total} total</span></h2><p>Most recently updated workspaces</p></div><Link className="link-action" href="/projects">View all projects <ArrowRight size={14}/></Link></div><div className="recent-table-scroll"><table className="project-table"><thead><tr><th>PROJECT &amp; CLIENT</th><th>TYPE</th><th>FOUNDER</th><th>STATUS</th><th>PROGRESS</th></tr></thead><tbody>{recent.map(p=><tr key={p.id}><td><Link className="project-table-name" href={`/projects/${p.id}`}><span className={`tiny-project-icon accent-${p.accent}`}>{p.name[0]}</span><span><strong>{p.name}</strong><small>{p.client||"Neo Vision Tech"}</small></span></Link></td><td><span className={`project-type-tag ${p.type==="Internal Product"?"internal":""}`}>{p.type==="Client Project"?"Client":"Internal"}</span></td><td><OwnerAvatars owner={p.owner} compact/></td><td><StatusBadge status={p.status}/></td><td><div className="progress-table-cell"><ProgressBar value={p.progress}/><span>{p.progress}%</span></div></td></tr>)}</tbody></table></div>{!recent.length&&<p className="empty-side">No projects yet. Create your first project.</p>}<div className="table-footer"><span>Showing {recent.length} of {total} projects</span><span>Projects visible to you</span></div></section>
