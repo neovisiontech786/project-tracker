@@ -51,13 +51,18 @@ export async function POST(request:Request){
           RETURNING id
       ) SELECT id FROM inserted`;
     if(!created.length){
-      const previous=await sql`SELECT id,name,created_by_id,description,owner_selection,status,is_private
+      const previous=await sql`SELECT id,name,created_by_id,description,owner_selection,status,is_private,
+        type,client_name,progress,due_date
         FROM projects WHERE creation_request_id=${requestId} LIMIT 1`;
       if(previous.length!==1 || previous[0].created_by_id!==actor.id ||
-          previous[0].name!==name || previous[0].description!==description ||
+          previous[0].name!==name || (previous[0].description||'')!==description ||
           previous[0].owner_selection!==d.owner || previous[0].status!==status ||
-          previous[0].is_private!==isPrivate)
+          previous[0].is_private!==isPrivate || previous[0].type!==type ||
+          (previous[0].client_name||null)!==(type==='internal'?null:client) ||
+          Number(previous[0].progress)!==progress ||
+          (previous[0].due_date?String(previous[0].due_date).slice(0,10):null)!==dueDate)
         throw new AccessError('This project request ID is already in use for different details.',409);
+      await syncProjectMemberships(String(previous[0].id));
       return ok({id:previous[0].id,idempotent:true});
     }
     await syncProjectMemberships(id);
