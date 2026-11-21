@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: '24'
       - name: Install dependencies
-        run: npm install --ignore-scripts --no-fund
+        run: npm ci --ignore-scripts --no-fund
       - name: Scan production dependencies
         run: npm audit --omit=dev --audit-level=high
       - name: Run regression tests
