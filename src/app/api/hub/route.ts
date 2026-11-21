@@ -86,18 +86,13 @@ export async function PATCH(request:Request){
   const current=await accessibleProject(id,actor.id);
   let status=String(current.status),progress=Number(current.progress);
   let change='Updated project details';
-  const holdQueries:ReturnType<typeof sql>[]=[];
+  let holdReason:string|null=null;
   if(values.status!==undefined){
     validate(validStatuses.includes(values.status),'Invalid status.');
     status=statusToDb[values.status as ProjectStatus];
     if(status==='on_hold'&&current.status!=='on_hold'){
       validate(typeof body.reason==='string' && body.reason.trim().length>0 && body.reason.length<=5000,'An on-hold reason is required.');
-      holdQueries.push(sql`INSERT INTO project_holds(project_id,reason,previous_status,started_by_id)
-        VALUES (${id},${body.reason.trim()},${String(current.status)}::project_status,${actor.id})`);
-    }
-    if(status!=='on_hold'&&current.status==='on_hold'){
-      holdQueries.push(sql`UPDATE project_holds SET resumed_at=now(),resumed_by_id=${actor.id}
-        WHERE project_id=${id} AND resumed_at IS NULL`);
+      holdReason=body.reason.trim();
     }
     change=`Changed status to ${values.status}`;
   }
@@ -141,17 +136,34 @@ export async function PATCH(request:Request){
   if(values.archived===false)change='Restored the project';
   if(values.isPrivate!==undefined&&values.isPrivate!==Boolean(current.is_private))change=isPrivate?'Made project private':'Shared project with both founders';
 
-  await sql.transaction([
-    ...holdQueries,
-    sql`UPDATE projects SET name=${name},description=${description},type=${type}::project_type,
-      client_name=${type==='internal'?null:client},owner_selection=${owner},
-      status=${status}::project_status,progress=${progress},due_date=${deadline},
-      archived_at=${archived},is_private=${isPrivate},
-      completed_at=${status==='completed'?(current.completed_at||new Date().toISOString()):null},
-      updated_by_id=${actor.id},updated_at=now() WHERE id=${id}`,
-    sql`INSERT INTO activity_logs(project_id,actor_id,action,details)
-      VALUES (${id},${actor.id},'project_updated',${JSON.stringify({description:change})}::jsonb)`
-  ]);
+  // A single atomic statement applies the status, hold history and activity log only
+  // when this version of the project is still current. Concurrent edits get HTTP 409.
+  const updated=await sql`
+    WITH changed AS (
+      UPDATE projects SET name=${name},description=${description},type=${type}::project_type,
+        client_name=${type==='internal'?null:client},owner_selection=${owner},
+        status=${status}::project_status,progress=${progress},due_date=${deadline},
+        archived_at=${archived},is_private=${isPrivate},
+        completed_at=${status==='completed'?(current.completed_at||new Date().toISOString()):null},
+        updated_by_id=${actor.id},updated_at=now()
+      WHERE id=${id} AND updated_at=${current.updated_at} RETURNING id
+    ), hold_started AS (
+      INSERT INTO project_holds(project_id,reason,previous_status,started_by_id)
+        SELECT id,${holdReason},${String(current.status)}::project_status,${actor.id} FROM changed
+        WHERE ${status==='on_hold'&&current.status!=='on_hold'}
+        RETURNING id
+    ), hold_resumed AS (
+      UPDATE project_holds SET resumed_at=now(),resumed_by_id=${actor.id}
+        WHERE project_id IN (SELECT id FROM changed)
+          AND resumed_at IS NULL AND ${status!=='on_hold'&&current.status==='on_hold'}
+        RETURNING id
+    ), logged AS (
+      INSERT INTO activity_logs(project_id,actor_id,action,details)
+        SELECT id,${actor.id},'project_updated',
+        ${JSON.stringify({description:change})}::jsonb FROM changed RETURNING id
+    ) SELECT id FROM changed
+  `;
+  if(updated.length!==1) throw new AccessError('This project changed while you were editing it. Refresh and try again.',409);
   await syncProjectMemberships(id);
   return ok({success:true});
  }catch(e){return errorResponse(e);}
