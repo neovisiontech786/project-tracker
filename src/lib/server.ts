@@ -1,6 +1,7 @@
 import 'server-only';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { neon } from '@neondatabase/serverless';
+import { parseFounderEmails, founderForVerifiedEmails } from './founder-access';
 import type { Project, ProjectNote, ProjectDocument, ProjectActivity, ProjectStatus, ProjectOwner } from './types';
 
 const statusToDb: Record<ProjectStatus,string> = {
@@ -36,29 +37,39 @@ export async function authorize() {
     return {id:userId,email:String(existing[0].email),name:String(existing[0].display_name) as 'Kabir'|'Naushad'};
   }
 
-  const allowed=(process.env.ALLOWED_FOUNDER_EMAILS||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
-  if (allowed.length!==2 || allowed[0]===allowed[1]) throw new AccessError('Founder access configuration is incomplete.',503);
+  const allowed=parseFounderEmails(process.env.ALLOWED_FOUNDER_EMAILS);
+  if (!allowed) throw new AccessError('Founder access configuration is incomplete.',503);
   const user=await currentUser();
   if(!user) throw new AccessError('Clerk could not load the signed-in user. Please sign out and sign in again.',401);
 
   const emails=user.emailAddresses||[];
   const verifiedEmails=emails.filter(e=>e.verification?.status==='verified').map(e=>e.emailAddress.trim().toLowerCase());
-  const email=verifiedEmails.find(e=>allowed.includes(e));
+  const label=founderForVerifiedEmails(verifiedEmails, allowed);
+  const email=label ? allowed[label==='Kabir'?0:1] : null;
   const displayedEmail=user.primaryEmailAddress?.emailAddress.trim().toLowerCase() || emails[0]?.emailAddress.trim().toLowerCase();
   if(!displayedEmail) throw new AccessError('Add a verified email address to your Clerk account.',403);
 
   if(email){
-    const label: 'Kabir'|'Naushad' = allowed.indexOf(email)===0?'Kabir':'Naushad';
     // Never silently replace the identity of an already onboarded founder.
     const other=await sql`SELECT id FROM users WHERE email=${email} AND id<>${userId} LIMIT 1`;
     if(other.length)throw new AccessError('This founder email belongs to a different Clerk account. Contact Kabir to resolve it.',403);
     const occupied=await sql`SELECT id FROM users WHERE display_name=${label} AND is_active=true AND id<>${userId} LIMIT 1`;
     if(occupied.length)throw new AccessError('That founder seat already belongs to another account. Contact Kabir.',403);
-    await sql`INSERT INTO users(id,email,display_name,avatar_url,is_active)
-      VALUES (${userId},${email},${label},${user.imageUrl||null},true)
-      ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email, display_name=EXCLUDED.display_name,
-        avatar_url=EXCLUDED.avatar_url,is_active=true,updated_at=now()`;
-    await syncFounderMemberships(userId,label);
+    // One database transaction: founder activation, project membership, and audit event.
+    // Conflict predicates and unique indexes prevent taking an already occupied seat.
+    await sql.transaction([
+      sql`INSERT INTO users(id,email,display_name,avatar_url,is_active)
+        VALUES (${userId},${email},${label},${user.imageUrl||null},true)
+        ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email, display_name=EXCLUDED.display_name,
+          avatar_url=EXCLUDED.avatar_url,is_active=true,updated_at=now()`,
+      sql`INSERT INTO project_members(project_id,user_id)
+        SELECT p.id,${userId} FROM projects p
+        WHERE (p.owner_selection='Both' OR p.owner_selection=${label})
+          AND (p.is_private=false OR p.created_by_id=${userId})
+        ON CONFLICT DO NOTHING`,
+      sql`INSERT INTO founder_access_events (actor_id, subject_id, action, details)
+        VALUES (${userId},${userId},'allowlist_activation',jsonb_build_object('role',${label}))`
+    ]);
     return {id:userId,email,name:label};
   }
 
