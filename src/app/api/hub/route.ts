@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   authorize, accessibleProject, database, errorResponse, AccessError, projectTypes,
   safeText, statusToDb, uuidCheck, validate, validOwners, validStatuses,
-  loadWorkspace, syncProjectMemberships
+  loadWorkspace, syncProjectMemberships, assertSameOrigin
 } from '@/lib/server';
 import type {ProjectStatus} from '@/lib/types';
 
@@ -16,6 +16,7 @@ export async function GET(){
 }
 export async function POST(request:Request){
  try{
+  assertSameOrigin(request);
   const actor=await authorize(),sql=database(),data=await request.json();
   validate(data && typeof data==='object' && !Array.isArray(data),'Invalid request.');
   if(data.action==='create'){
@@ -60,6 +61,7 @@ export async function POST(request:Request){
 }
 export async function PATCH(request:Request){
  try{
+  assertSameOrigin(request);
   const actor=await authorize(),sql=database(),body=await request.json();
   validate(body&&typeof body==='object'&&!Array.isArray(body),'Invalid update.');
   const id=uuidCheck(body.id),values=body.values||{};
