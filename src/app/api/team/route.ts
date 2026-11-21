@@ -56,41 +56,67 @@ export async function POST(request:Request){
       throw new AccessError('Invitation email could not be sent. Check Clerk and retry.',502);
     }
   }
-  if(data.action==='changeRole'||data.action==='suspend'||data.action==='activate'||data.action==='remove'){
+  if(['changeRole','suspend','activate','remove','restore'].includes(data.action)){
     const targetId=userId(data.userId);
     const target=await sql`SELECT id,role,is_active,revoked_at,removed_at FROM users WHERE id=${targetId} LIMIT 1`;
     if(!target.length)throw new AccessError('Account not found.',404);
-    if(target[0].removed_at)throw new AccessError('Removed accounts cannot be reactivated. Invite a new account.',409);
-    if(targetId===actor.id && data.action!=='changeRole')throw new AccessError('You cannot suspend or remove your own account.',409);
-    if(targetId===actor.id && data.action==='changeRole' && data.role!=='admin')throw new AccessError('You cannot downgrade your own admin account.',409);
-    const otherAdmins=await sql`SELECT count(*)::int AS total FROM users WHERE role='admin'
-       AND is_active=true AND revoked_at IS NULL AND removed_at IS NULL AND id<>${targetId}`;
-    if(target[0].role==='admin' && Number(otherAdmins[0].total)===0 &&
-       (data.action==='remove'||data.action==='suspend'||(data.action==='changeRole'&&data.role!=='admin')))
-       throw new AccessError('The workspace must retain at least one active administrator.',409);
+    if(target[0].removed_at && data.action!=='restore')
+      throw new AccessError('This account is removed. Use Restore account to reinstate its access.',409);
+    if(data.action==='restore' && !target[0].removed_at)
+      throw new AccessError('Only removed accounts can be restored.',409);
+    if(targetId===actor.id && data.action!=='changeRole')
+      throw new AccessError('You cannot suspend or remove your own account.',409);
+    if(targetId===actor.id && data.action==='changeRole' && data.role!=='admin')
+      throw new AccessError('You cannot downgrade your own admin account.',409);
+
+    const next=data.action==='changeRole'?role(data.role):null;
+    // The advisory transaction lock serializes admin-management writes. The
+    // conditional UPDATE rechecks the last-admin invariant inside that lock.
+    let updated:Record<string,unknown>[][]=[];
     if(data.action==='changeRole'){
-      const next=role(data.role);
-      await sql`UPDATE users SET role=${next},updated_at=now() WHERE id=${targetId}`;
-    }else if(data.action==='suspend'){
-      await sql`UPDATE users SET is_active=false,revoked_at=now(),updated_at=now()
-        WHERE id=${targetId}`;
-    }else if(data.action==='activate'){
-      await sql`UPDATE users SET is_active=true,revoked_at=null,updated_at=now()
-        WHERE id=${targetId} AND removed_at IS NULL`;
-    }else{
-      await sql`UPDATE users SET is_active=false,revoked_at=now(),removed_at=now(),updated_at=now()
-        WHERE id=${targetId}`;
+      updated=await sql.transaction([
+        sql`SELECT pg_advisory_xact_lock(845021)`,
+        sql`UPDATE users SET role=${next},updated_at=now()
+          WHERE id=${targetId} AND (role<>'admin' OR ${next==='admin'} OR
+            EXISTS(SELECT 1 FROM users WHERE id<>${targetId} AND role='admin'
+              AND is_active=true AND revoked_at IS NULL AND removed_at IS NULL))
+          RETURNING id`
+      ]);
+    }else if(data.action==='suspend'||data.action==='remove'){
+      updated=await sql.transaction([
+        sql`SELECT pg_advisory_xact_lock(845021)`,
+        sql`UPDATE users SET is_active=false,revoked_at=now(),
+          removed_at=CASE WHEN ${data.action==='remove'} THEN now() ELSE removed_at END,
+          updated_at=now()
+          WHERE id=${targetId} AND (role<>'admin' OR
+             EXISTS(SELECT 1 FROM users WHERE id<>${targetId} AND role='admin'
+               AND is_active=true AND revoked_at IS NULL AND removed_at IS NULL))
+          RETURNING id`
+      ]);
+    }else if(data.action==='restore'){
+      updated=await sql.transaction([
+        sql`SELECT pg_advisory_xact_lock(845021)`,
+        sql`UPDATE users SET is_active=true,revoked_at=null,removed_at=null,updated_at=now()
+          WHERE id=${targetId} AND removed_at IS NOT NULL RETURNING id`
+      ]);
+    }else {
+      updated=await sql.transaction([
+        sql`SELECT pg_advisory_xact_lock(845021)`,
+        sql`UPDATE users SET is_active=true,revoked_at=null,updated_at=now()
+          WHERE id=${targetId} AND removed_at IS NULL RETURNING id`
+      ]);
     }
+    if(!updated[1]?.length)throw new AccessError('Cannot remove the final active administrator. Refresh team settings.',409);
     await sql`INSERT INTO founder_access_events(actor_id,subject_id,action,details)
       VALUES (${actor.id},${targetId},${data.action},
-       jsonb_build_object('role',${data.action==='changeRole'?data.role:String(target[0].role)}))`;
+        jsonb_build_object('role',${next||String(target[0].role)}))`;
     await sql`DELETE FROM project_members WHERE user_id=${targetId}`;
-    if(data.action==='activate'||data.action==='changeRole'){
+    if(['activate','restore','changeRole'].includes(data.action)){
       await sql`INSERT INTO project_members(project_id,user_id)
         SELECT p.id,u.id FROM projects p JOIN users u ON u.id=${targetId}
         WHERE u.is_active=true AND u.revoked_at IS NULL AND u.removed_at IS NULL
           AND (p.created_by_id=u.id OR (p.is_private=false AND
-           (u.role IN ('admin','founder') OR p.owner_selection=u.id)))
+            (u.role IN ('admin','founder') OR p.owner_selection=u.id)))
         ON CONFLICT DO NOTHING`;
     }
     return json({success:true});
