@@ -1,3 +1,4 @@
+import { clerkClient } from '@clerk/nextjs/server';
 import { authorize, database, errorResponse, AccessError, validate, assertSameOrigin } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -33,6 +34,13 @@ export async function POST(request:Request) {
     const sql=database();
     const pending=await sql`SELECT id,email FROM users WHERE id=${body.userId} AND is_active=false AND revoked_at IS NULL LIMIT 1`;
     if(pending.length!==1)throw new AccessError('The pending request was not found or was already approved.',404);
+    // Recheck the live Clerk account and verified email at approval time.
+    const clerk=await clerkClient();
+    const applicant=await clerk.users.getUser(body.userId);
+    const verified=applicant.emailAddresses.some(e=>
+      e.verification?.status==='verified' &&
+      e.emailAddress.trim().toLowerCase()===String(pending[0].email).trim().toLowerCase());
+    if(!verified)throw new AccessError('The pending Clerk account does not own this verified email address.',403);
     const occupied=await sql`SELECT id FROM users
       WHERE display_name='Naushad' AND is_active=true LIMIT 1`;
     if(occupied.length)throw new AccessError('The Naushad founder account is already active.',409);
