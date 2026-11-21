@@ -86,7 +86,13 @@ export async function PATCH(request:Request){
     validate(Number.isInteger(values.progress)&&values.progress>=0&&values.progress<=100,'Progress must be between 0 and 100.');
     progress=values.progress;change=`Updated progress to ${progress}%`;
   }
+  // Maintain domain invariants for every transition, including reopening completed work.
   if(status==='completed')progress=100;
+  else if(status==='not_started')progress=0;
+  else if(progress===100){
+    validate(values.progress===undefined,'Only completed projects may have 100% progress.');
+    progress=99;
+  }
   if(values.archived!==undefined)validate(typeof values.archived==='boolean','Invalid archive value.');
   const name=values.name!==undefined?safeText(values.name,180):String(current.name);
   validate(name.length>0,'Project name is required.');
@@ -102,6 +108,14 @@ export async function PATCH(request:Request){
     if(current.created_by_id!==actor.id)throw new AccessError('Only the project creator can change its privacy.',403);
   }
   const isPrivate=values.isPrivate===undefined?Boolean(current.is_private):values.isPrivate;
+  // Project confidentiality cannot conceal an existing company financial ledger.
+  if(isPrivate && !Boolean(current.is_private)){
+    const financial=await sql`SELECT
+      EXISTS(SELECT 1 FROM project_financials WHERE project_id=${id}) OR
+      EXISTS(SELECT 1 FROM client_receipts WHERE project_id=${id}) OR
+      EXISTS(SELECT 1 FROM founder_transfers WHERE project_id=${id}) AS has_finance`;
+    if(financial[0]?.has_finance) throw new AccessError('A project with financial history cannot be made private. Keep its financial records visible to both founders.',409);
+  }
   if(isPrivate && owner!==actor.name)throw new AccessError('Private projects must be assigned to their creator. Choose Shared to assign the other founder.',400);
   const archived=values.archived===undefined?current.archived_at:(values.archived?new Date().toISOString():null);
   if(values.archived===true)change='Archived the project';
