@@ -34,14 +34,15 @@ export default function SettingsPage(){
    if(!response.ok)throw new Error(result.error||'Team update failed.');
    setSuccess(payload.action==='invite'?'Invitation email sent.':'Team access updated successfully.');
    await load();await reload();
-  }catch(e){setError(e instanceof Error?e.message:'Team update failed.');}
+   return true;
+  }catch(e){setError(e instanceof Error?e.message:'Team update failed.');return false;}
   finally{setBusy(false);}
  }
  async function invite(event:FormEvent){
   event.preventDefault();
   if(!name.trim()||!email.trim())return;
-  await mutate({action:'invite',name:name.trim(),email:email.trim(),role});
-  // Retain the form on an error so it can be retried without retyping.
+  const sent=await mutate({action:'invite',name:name.trim(),email:email.trim(),role});
+  if(sent){setName('');setEmail('');setRole('member');}
  }
  function changeUser(action:string,member:Member,next?:TeamRole){
    if(action==='remove'&&!confirm(`Remove ${member.name}? Their access will be revoked; historical records will remain.`))return;
