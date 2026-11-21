@@ -50,7 +50,7 @@ export async function GET(request: Request) {
     if (selected) await accessibleProject(uuidCheck(selected), actor);
     const sql = database();
     // Private project finance is scoped to its creator, including records and totals.
-    const [finance, receipts, transfers] = await Promise.all([
+    const [finance, receipts, transfers, participants] = await Promise.all([
       sql`SELECT p.id AS project_id, f.quoted_paise, f.quoted_updated_at
           FROM projects p LEFT JOIN project_financials f ON f.project_id = p.id
           WHERE (p.is_private = false OR p.created_by_id = ${actor.id}) ORDER BY p.created_at`,
@@ -64,9 +64,16 @@ export async function GET(request: Request) {
           JOIN users u ON u.id = t.recorded_by_id
           WHERE (p.is_private = false OR p.created_by_id = ${actor.id})
           ORDER BY t.transferred_at DESC, t.created_at DESC`,
+      sql`SELECT id,display_name AS name,role,is_active AS active FROM users
+        WHERE role IN ('admin','founder') OR
+         id IN (SELECT received_by FROM client_receipts
+           UNION SELECT from_founder FROM founder_transfers
+           UNION SELECT to_founder FROM founder_transfers)
+        ORDER BY display_name`,
     ]);
     const keep = (projectId: unknown) => !selected || projectId === selected;
     return reply({
+      participants,
       finance: finance.filter(f => keep(f.project_id)).map(f => ({
         projectId: f.project_id,
         quotedPaise: f.quoted_paise === null || f.quoted_paise === undefined ? null : integerAmount(f.quoted_paise),
