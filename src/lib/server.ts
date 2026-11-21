@@ -69,7 +69,7 @@ export async function authorize():Promise<TeamActor> {
     .map(e=>e.emailAddress.trim().toLowerCase());
   if(!verified.length)throw new AccessError('Verify your email address to accept the invitation.',403);
   const invitation=await sql`SELECT id,email,display_name,role
-    FROM team_invitations WHERE email=ANY(${verified}) AND status='sent'
+    FROM team_invitations WHERE email=ANY(${verified}) AND status='sent' AND expires_at>now()
     ORDER BY created_at DESC LIMIT 1`;
   if(!invitation.length)throw new AccessError('No active workspace invitation for this email. Ask an administrator to invite you.',403);
   const invite=invitation[0];
@@ -80,7 +80,7 @@ export async function authorize():Promise<TeamActor> {
   const claimed=await sql`
     WITH invite AS (
       SELECT id,email,display_name,role FROM team_invitations
-      WHERE id=${invite.id} AND status='sent' FOR UPDATE
+      WHERE id=${invite.id} AND status='sent' AND expires_at>now() FOR UPDATE
     ), activated AS (
       INSERT INTO users(id,email,display_name,avatar_url,role,is_active,revoked_at,removed_at)
         SELECT ${userId},email,display_name,${clerkUser.imageUrl||null},role,true,null,null FROM invite
