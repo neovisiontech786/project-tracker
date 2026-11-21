@@ -1,4 +1,4 @@
-import { authorize, database, errorResponse, AccessError, validate } from '@/lib/server';
+import { authorize, database, errorResponse, AccessError, validate, assertSameOrigin } from '@/lib/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,6 +26,7 @@ export async function GET() {
 // permitting arbitrary public sign-ups or requiring an unrestricted email list.
 export async function POST(request:Request) {
   try {
+    assertSameOrigin(request);
     const actor=await requireKabir();
     const body = await request.json();
     validate(body && body.action==='approve' && typeof body.userId==='string' && /^user_[a-zA-Z0-9]{8,80}$/.test(body.userId),'Invalid request.');
