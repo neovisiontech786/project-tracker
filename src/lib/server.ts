@@ -15,6 +15,17 @@ export { statusToDb, dbToStatus, projectTypes };
 export class AccessError extends Error {
   constructor(message: string, public status: number = 403) { super(message); }
 }
+// Reject browser cross-site writes as an additional layer beyond Clerk's session cookies.
+export function assertSameOrigin(request: Request): void {
+  const origin = request.headers.get('origin');
+  if (!origin) return; // Non-browser clients are still authenticated at the API boundary.
+  try {
+    const from=new URL(origin), target=new URL(request.url);
+    if(from.protocol !== target.protocol || from.host !== target.host) throw new Error('origin mismatch');
+  }catch{
+    throw new AccessError('Cross-origin modifications are not allowed.',403);
+  }
+}
 export function database() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new AccessError('DATABASE_URL is not configured.',503);
