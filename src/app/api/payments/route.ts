@@ -1,4 +1,4 @@
-import { authorize, accessibleProject, database, errorResponse, AccessError, safeText, uuidCheck, validate } from "@/lib/server";
+import { authorize, accessibleProject, database, errorResponse, AccessError, safeText, uuidCheck, validate, assertSameOrigin } from "@/lib/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -87,6 +87,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const actor = await authorize();
     const data = await request.json();
     validate(data && typeof data === "object" && !Array.isArray(data), "Invalid payment request.");
