@@ -22,13 +22,17 @@ export default function PaymentsPage() {
     setLoading(true); setData(null); setLoadedFor(null); setError("");
     if (!isLoaded) return () => { active = false; };
     if (!isSignedIn || !userId) { setLoading(false); return () => { active = false; }; }
-    financeRequest<FinancePayload>("/api/payments")
-      .then(result => {
-        if (active) { setData(result); setLoadedFor(userId); }
-      })
-      .catch(e => { if (active) setError(e instanceof Error ? e.message : "Could not load payments."); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    const refresh=()=>{
+      if(document.visibilityState==='hidden')return;
+      void financeRequest<FinancePayload>("/api/payments")
+        .then(result=>{if(active){setData(result);setLoadedFor(userId);setError("");}})
+        .catch(e=>{if(active)setError(e instanceof Error?e.message:"Could not load payments.");})
+        .finally(()=>{if(active)setLoading(false);});
+    };
+    refresh();
+    window.addEventListener('focus',refresh);
+    const timer=window.setInterval(refresh,60000);
+    return () => { active=false;window.removeEventListener('focus',refresh);window.clearInterval(timer); };
   }, [isLoaded, isSignedIn, userId]);
   // Never render a previous founder's private financial data after account switch.
   const safeData = isSignedIn && loadedFor === userId ? data : null;
