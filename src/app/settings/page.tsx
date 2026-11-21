@@ -102,6 +102,12 @@ export default function SettingsPage(){
       </div>}
      </div>)}
     {members.length===0&&<p className="nothing-yet">No team members found.</p>}
+    {members.some(m=>m.removed_at)&&<><h3 style={{marginTop:20}}>Removed accounts</h3>
+     {members.filter(m=>m.removed_at).map(member=><div className="member-row" key={member.id} style={{gap:12}}>
+       <div style={{flex:1,minWidth:0}}><strong>{member.name}</strong><span>{member.email} · Removed</span></div>
+       <button className="btn btn-secondary" disabled={busy} onClick={()=>void mutate({action:'restore',userId:member.id})}>Restore account</button>
+     </div>)}
+    </>}
     <h3 style={{marginTop:20}}>Pending invitations</h3>
     {invitations.map(inv=><div className="member-row" key={inv.id} style={{gap:12}}>
      <div style={{flex:1,minWidth:0}}><strong>{inv.name}</strong><span style={{overflowWrap:'anywhere'}}>{inv.email} · {inv.role} · {inv.status}</span></div>
