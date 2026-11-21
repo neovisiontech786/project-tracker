@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import {authorize,accessibleProject,AccessError,database,errorResponse,uuidCheck,validate} from '@/lib/server';
+import {authorize,accessibleProject,AccessError,database,errorResponse,uuidCheck,validate,assertSameOrigin} from '@/lib/server';
 import {confirmFile,removeFile,signDownload,signUpload} from '@/lib/storage';
 
 export const runtime='nodejs';export const dynamic='force-dynamic';
@@ -25,6 +25,7 @@ export async function GET(req:Request){
 }
 export async function POST(req:Request){
  try{
+  assertSameOrigin(req);
   const actor=await authorize(),sql=database(),input=await req.json();
   if(input.action==='prepare'){
    const projectId=uuidCheck(input.projectId);
@@ -56,7 +57,8 @@ export async function POST(req:Request){
  }catch(e){return errorResponse(e);}
 }
 export async function DELETE(req:Request){
- try{const actor=await authorize(),sql=database(),{id}=await req.json();const doc=await getDocument(uuidCheck(id),actor.id);
+ try{
+  assertSameOrigin(req);const actor=await authorize(),sql=database(),{id}=await req.json();const doc=await getDocument(uuidCheck(id),actor.id);
    // Revoke application access atomically before removing the storage object.
    await sql.transaction([
      sql`UPDATE project_documents SET deleted_at=now(),deleted_by_id=${actor.id} WHERE id=${id} AND deleted_at IS NULL`,
