@@ -228,6 +228,7 @@ export const teamInvitations = pgTable("team_invitations",{
  displayName:varchar("display_name",{length:120}).notNull(),
  role:varchar("role",{length:12}).notNull(),
  status:varchar("status",{length:12}).notNull().default("pending"),
+ expiresAt:timestamp("expires_at",{withTimezone:true}).notNull(),
  clerkInvitationId:varchar("clerk_invitation_id",{length:255}),
  invitedById:varchar("invited_by_id",{length:255}).notNull().references(()=>users.id,{onDelete:"restrict"}),
  acceptedById:varchar("accepted_by_id",{length:255}).references(()=>users.id,{onDelete:"restrict"}),
