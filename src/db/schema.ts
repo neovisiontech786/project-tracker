@@ -18,7 +18,7 @@ import {
   bigint,
 } from "drizzle-orm/pg-core";
 
-// Auth is handled by Clerk. This is the app's two-user profile/allowlist table.
+// Auth is handled by Clerk; database roles are the authorization source of truth.
 // The primary key is Clerk's user ID (e.g. user_...).
 export const users = pgTable("users", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -99,7 +99,7 @@ export const projects = pgTable(
   ],
 );
 
-// One membership row per assigned founder; "Both" means two rows.
+// One membership row per assigned team user. Project access checks use active role and assignment IDs.
 export const projectMembers = pgTable(
   "project_members",
   {
