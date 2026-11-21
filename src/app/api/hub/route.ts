@@ -143,7 +143,7 @@ export async function PATCH(request:Request){
         archived_at=${archived},is_private=${isPrivate},
         completed_at=${status==='completed'?(current.completed_at||new Date().toISOString()):null},
         updated_by_id=${actor.id},updated_at=now()
-      WHERE id=${id} AND updated_at=${current.updated_at} RETURNING id
+      WHERE id=${id} AND xmin::text=${String(current.row_version)} RETURNING id
     ), hold_started AS (
       INSERT INTO project_holds(project_id,reason,previous_status,started_by_id)
         SELECT id,${holdReason},${String(current.status)}::project_status,${actor.id} FROM changed
