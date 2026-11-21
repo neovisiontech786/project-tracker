@@ -7,7 +7,7 @@ type HubData={viewerName:string;projects:Project[];notes:ProjectNote[];documents
 type HubContext=HubData & {
  ready:boolean;error:string;
  reload:()=>Promise<void>;
- createProject:(draft:ProjectDraft)=>Promise<string>;
+ createProject:(draft:ProjectDraft,requestId:string)=>Promise<string>;
  updateProject:(id:string,values:Partial<Project>,reason?:string)=>Promise<void>;
  archiveProject:(id:string)=>Promise<void>;
  addNote:(projectId:string,content:string)=>Promise<void>;
@@ -50,8 +50,8 @@ export function ProjectStoreProvider({children}:{children:ReactNode}){
    const id=window.setInterval(refresh,60000);
    return ()=>{window.removeEventListener("focus",refresh);window.clearInterval(id);};
  },[reload,isLoaded,isSignedIn,userId]);
- const createProject=useCallback(async(draft:ProjectDraft)=>{
-   const result=await api<{id:string}>('/api/hub',json('POST',{action:'create',draft}));await reload();return result.id;
+ const createProject=useCallback(async(draft:ProjectDraft,requestId:string)=>{
+   const result=await api<{id:string}>('/api/hub',json('POST',{action:'create',draft,requestId}));await reload();return result.id;
  },[reload]);
  const updateProject=useCallback(async(id:string,values:Partial<Project>,reason?:string)=>{
    await api('/api/hub',json('PATCH',{id,values,reason}));await reload();
