@@ -38,13 +38,13 @@ export function AppShell({children}:{children:React.ReactNode}){
      <div className="sidebar-profile"><div className="profile-avatar">{(user?.firstName||user?.primaryEmailAddress?.emailAddress||"F")[0].toUpperCase()}</div><div><strong>{user?.fullName||"Founder"}</strong><small>Neo Vision Tech</small></div><SignOutButton redirectUrl="/sign-in"><button title="Sign out" className="icon-button"><ArrowUpRight size={15}/></button></SignOutButton></div>
    </div>
  </>;
- if(error && (error.includes("Founder access pending") || error.includes("different Clerk account") || error.includes("founder seat"))){
+ if(error && (error.includes("No active workspace invitation") || error.includes("Verify your email address") || error.includes("Workspace access is suspended") || error.includes("account was removed") || error.includes("another workspace account"))){
    return <div className="access-wait-page"><section className="access-wait-card">
      <div className="signin-logo"><Image src="/branding/neo-vision-mark.webp" alt="Neo Vision Tech emblem" width={64} height={64} className="brand-logo-image" priority/></div>
      <span className="signin-eyebrow">NEO VISION TECH · PROJECT HUB</span>
-     <h1>Account approval required</h1>
+     <h1>Workspace access required</h1>
      <p>{error}</p>
-     <p>Only Kabir and Naushad have access to project data. If this is Naushad's account, Kabir can approve it in Workspace Settings.</p>
+     <p>Access is invitation-only. Ask a workspace administrator to invite your verified email address.</p>
      <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
        <button className="btn btn-primary" onClick={()=>void reload().catch(()=>{})}>Check access again</button>
        <SignOutButton redirectUrl="/sign-in"><button className="btn btn-secondary">Sign out</button></SignOutButton>
