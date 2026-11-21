@@ -39,6 +39,7 @@ export async function POST(request:Request){
       VALUES (${email},${name},${newRole},${actor.id},'pending')
       ON CONFLICT(email) DO UPDATE SET display_name=EXCLUDED.display_name,
        role=EXCLUDED.role,invited_by_id=EXCLUDED.invited_by_id,status='pending',
+       expires_at=now()+interval '30 days',
        clerk_invitation_id=null,updated_at=now()`;
     try {
       const clerk=await clerkClient();
