@@ -59,8 +59,10 @@ export async function authorize() {
   const verifiedEmails=emails.filter(e=>e.verification?.status==='verified').map(e=>e.emailAddress.trim().toLowerCase());
   const label=founderForVerifiedEmails(verifiedEmails, allowed);
   const email=label ? allowed[label==='Kabir'?0:1] : null;
-  const displayedEmail=user.primaryEmailAddress?.emailAddress.trim().toLowerCase() || emails[0]?.emailAddress.trim().toLowerCase();
-  if(!displayedEmail) throw new AccessError('Add a verified email address to your Clerk account.',403);
+  const preferred=user.primaryEmailAddress?.emailAddress.trim().toLowerCase();
+  const displayedEmail=preferred && verifiedEmails.includes(preferred) ? preferred : verifiedEmails[0];
+  // Never create approvable access requests from unverified email addresses.
+  if(!displayedEmail) throw new AccessError('Verify your email address in Clerk before requesting founder access.',403);
 
   if(email){
     // Never silently replace the identity of an already onboarded founder.
