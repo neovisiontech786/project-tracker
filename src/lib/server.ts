@@ -68,9 +68,10 @@ export async function authorize():Promise<TeamActor> {
   const verified=clerkUser.emailAddresses.filter(e=>e.verification?.status==='verified')
     .map(e=>e.emailAddress.trim().toLowerCase());
   if(!verified.length)throw new AccessError('Verify your email address to accept the invitation.',403);
-  const invitation=await sql`SELECT id,email,display_name,role
-    FROM team_invitations WHERE email=ANY(${verified}) AND status='sent' AND expires_at>now()
-    ORDER BY created_at DESC LIMIT 1`;
+  const invites=await Promise.all(verified.map(email=>sql`SELECT id,email,display_name,role
+    FROM team_invitations WHERE email=${email} AND status='sent' AND expires_at>now()
+    ORDER BY created_at DESC LIMIT 1`));
+  const invitation=invites.flat().slice(0,1);
   if(!invitation.length)throw new AccessError('No active workspace invitation for this email. Ask an administrator to invite you.',403);
   const invite=invitation[0];
   const conflicting=await sql`SELECT id,removed_at,revoked_at FROM users WHERE email=${invite.email} AND id<>${userId} LIMIT 1`;
