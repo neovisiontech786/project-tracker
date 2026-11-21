@@ -122,8 +122,8 @@ export async function syncFounderMemberships(userId:string,label:'Kabir'|'Nausha
 }
 export async function accessibleProject(projectId:string,actorId:string){
   const sql=database();
-  const rows=await sql`SELECT * FROM projects WHERE id=${projectId}
-    AND (is_private=false OR created_by_id=${actorId}) LIMIT 1`;
+  const rows=await sql`SELECT p.*,p.xmin::text AS row_version FROM projects p WHERE p.id=${projectId}
+    AND (p.is_private=false OR p.created_by_id=${actorId}) LIMIT 1`;
   if(rows.length!==1)throw new AccessError('Project not found or not accessible.',404);
   return rows[0];
 }
