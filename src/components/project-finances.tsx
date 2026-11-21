@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowDownLeft, ArrowLeftRight, Banknote, CheckCircle2, CircleHelp, IndianRupee, PencilLine, Plus, ReceiptText, ShieldCheck, X } from "lucide-react";
 import { Modal } from "@/components/ui";
+import { useHub } from "@/lib/project-store";
 import { useAuth } from "@clerk/nextjs";
 import {
   activeReceipts, activeTransfers, currentLocalDatetime, duePaise, financeMutation,
@@ -12,6 +13,9 @@ import {
 
 export function ProjectFinances({ projectId, viewerName }: { projectId: string; viewerName: string }) {
   const { userId } = useAuth();
+  const {teamMembers,viewerId}=useHub();
+  const holders=teamMembers.filter(m=>m.role==="founder"||m.role==="admin");
+  const defaultHolder=holders.some(m=>m.id===viewerId)?viewerId:(holders[0]?.id||"");
   const scope = `${userId || "guest"}:${projectId}`;
   const currentScope = useRef(scope);
   currentScope.current = scope;
@@ -27,8 +31,8 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState("");
   const [method, setMethod] = useState("Google Pay");
-  const [receivedBy, setReceivedBy] = useState<FounderName>(viewerName === "Naushad" ? "Naushad" : "Kabir");
-  const [fromFounder, setFromFounder] = useState<FounderName>(viewerName === "Naushad" ? "Naushad" : "Kabir");
+  const [receivedBy, setReceivedBy] = useState<FounderName>(defaultHolder);
+  const [fromFounder, setFromFounder] = useState<FounderName>(defaultHolder);
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
   const requestId = useRef<string | null>(null);
@@ -62,8 +66,7 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
   const received = sumPaise(activeClientPayments);
   const due = duePaise(quote, received);
   const overpaid = quote === null ? 0 : Math.max(0, received - quote);
-  const kabir = heldBy("Kabir", receipts, transfers);
-  const naushad = heldBy("Naushad", receipts, transfers);
+
 
   function editQuote() { setQuotedAmount(moneyInput(quote)); setQuoteEditing(true); setMessage(""); setError(""); }
   async function submitQuote(event: FormEvent) {
@@ -77,8 +80,8 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
   }
   function openForm(next: "receipt" | "transfer") {
     setForm(next); setAmount(""); setDate(currentLocalDatetime()); setMethod("Google Pay");
-    setReceivedBy(viewerName === "Naushad" ? "Naushad" : "Kabir");
-    setFromFounder(viewerName === "Naushad" ? "Naushad" : "Kabir");
+    setReceivedBy(defaultHolder);
+    setFromFounder(defaultHolder);
     setReference(""); setNote(""); setMessage(""); setError(""); requestId.current = null;
   }
   function closeForm() { setForm(null); requestId.current = null; setError(""); }
@@ -92,7 +95,7 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
       if (Number.isNaN(timestamp.getTime())) throw new Error("Please choose a valid transaction date and time.");
       const common = { projectId, amount: amount.trim(), method, reference: reference.trim(), note: note.trim(), requestId: requestId.current };
       if (form === "receipt") await financeMutation({ action: "receipt", ...common, paidAt: timestamp.toISOString(), receivedBy });
-      else await financeMutation({ action: "transfer", ...common, transferredAt: timestamp.toISOString(), fromFounder, toFounder: fromFounder === "Kabir" ? "Naushad" : "Kabir" });
+      else await financeMutation({ action: "transfer", ...common, transferredAt: timestamp.toISOString(), fromFounder, toFounder: holders.find(m=>m.id!==fromFounder)?.id||"" });
       await load();
       setMessage(form === "receipt" ? "Client payment recorded successfully." : "Founder transfer recorded successfully.");
       closeForm();
@@ -115,7 +118,7 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
   return <div className="payment-shell">
     <div className="payment-section-head">
       <div><h2>Project payments</h2><p>Quotations, client receipts and founder settlements — all in INR.</p></div>
-      <div className="payment-head-actions"><button type="button" className="btn btn-secondary" disabled={saving} onClick={() => openForm("transfer")}><ArrowLeftRight size={16}/> Transfer</button><button type="button" className="btn btn-primary" disabled={saving} onClick={() => openForm("receipt")}><Plus size={16}/> Record payment</button></div>
+      <div className="payment-head-actions"><button type="button" className="btn btn-secondary" disabled={saving||holders.length<2} onClick={() => openForm("transfer")}><ArrowLeftRight size={16}/> Transfer</button><button type="button" className="btn btn-primary" disabled={saving||holders.length===0} onClick={() => openForm("receipt")}><Plus size={16}/> Record payment</button></div>
     </div>
     {message && <div className="payment-feedback success"><CheckCircle2 size={17}/>{message}<button type="button" aria-label="Dismiss" onClick={() => setMessage("")}><X size={15}/></button></div>}
     {error && <div className="payment-feedback error" role="alert">{error}<button type="button" aria-label="Dismiss" onClick={() => setError("")}><X size={15}/></button></div>}
@@ -128,21 +131,21 @@ export function ProjectFinances({ projectId, viewerName }: { projectId: string; 
     {overpaid > 0 && <div className="payment-feedback warning"><CircleHelp size={16}/>Received exceeds the quotation by {money(overpaid)}. Check whether this is an advance or an extra charge.</div>}
     {quoteEditing && <Modal open={quoteEditing} onClose={() => { if (!saving) setQuoteEditing(false); }} title="Project quotation" subtitle="Set the total agreed price. Your outstanding balance will update automatically."><form className="payment-quote-modal" onSubmit={submitQuote}>{error && <div className="payment-feedback error" role="alert">{error}</div>}<div className="payment-inline-form"><label>Quotation (₹)<input autoFocus inputMode="decimal" type="text" value={quotedAmount} onChange={e => setQuotedAmount(e.target.value)} placeholder="150000.00" required/></label><button type="submit" disabled={saving} className="btn btn-primary">{saving ? "Saving…" : "Save amount"}</button><button type="button" disabled={saving} onClick={() => setQuoteEditing(false)} className="btn btn-secondary">Cancel</button></div></form></Modal>}
     <div className="payment-founder-grid">
-      {([ { name: "Kabir", data: kabir }, { name: "Naushad", data: naushad } ] as const).map(f => <div key={f.name} className="surface-card payment-founder-card"><div><span className="payment-founder-avatar">{f.name[0]}</span><div><strong>{f.name}</strong><small>Tracked money currently held</small></div></div><strong className="payment-founder-balance">{money(f.data.balance)}</strong><p>Client payments: {money(f.data.clients)}<span>Incoming transfers: {money(f.data.incoming)}</span><span>Outgoing transfers: {money(f.data.outgoing)}</span></p></div>)}
+      {holders.map(m => {const data=heldBy(m.id,receipts,transfers);return <div key={m.id} className="surface-card payment-founder-card"><div><span className="payment-founder-avatar">{m.name[0]}</span><div><strong>{m.name}</strong><small>Tracked money currently held</small></div></div><strong className="payment-founder-balance">{money(data.balance)}</strong><p>Client payments: {money(data.clients)}<span>Incoming transfers: {money(data.incoming)}</span><span>Outgoing transfers: {money(data.outgoing)}</span></p></div>;})}
     </div>
     <p className="payment-explainer"><ShieldCheck size={15}/> Founder balances show tracked collections and transfers, not profit shares or bank balances. Founder transfers never count as new client income.</p>
-    {form && <Modal open={!!form} onClose={() => { if (!saving) closeForm(); }} title={form === "receipt" ? "Record client payment" : "Record founder transfer"} subtitle={form === "receipt" ? "Add the money actually received from the client." : "Track a payment transferred between Kabir and Naushad."} wide><div className="payment-modal-container">{error && <div className="payment-feedback error" role="alert">{error}</div>}<form onSubmit={submitEntry} className="payment-entry-form">
+    {form && <Modal open={!!form} onClose={() => { if (!saving) closeForm(); }} title={form === "receipt" ? "Record client payment" : "Record founder transfer"} subtitle={form === "receipt" ? "Add the money actually received from the client." : "Track a payment between active admins or founders."} wide><div className="payment-modal-container">{error && <div className="payment-feedback error" role="alert">{error}</div>}<form onSubmit={submitEntry} className="payment-entry-form">
       <label>Amount (₹) *<input type="text" inputMode="decimal" placeholder="10000.00" required value={amount} onChange={e => editField(setAmount, e.target.value)}/></label>
       <label>Date and time *<input type="datetime-local" required value={date} max={currentLocalDatetime()} onChange={e => editField(setDate, e.target.value)}/></label>
       <label>Payment method *<select value={method} onChange={e => editField(setMethod, e.target.value)}>{PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}</select></label>
-      {form === "receipt" ? <label>Received by *<select value={receivedBy} onChange={e => {setReceivedBy(e.target.value as FounderName);requestId.current=null;}}><option>Kabir</option><option>Naushad</option></select></label> : <><label>Sent by *<select value={fromFounder} onChange={e => {setFromFounder(e.target.value as FounderName);requestId.current=null;}}><option>Kabir</option><option>Naushad</option></select></label><label>Received by<input readOnly value={fromFounder === "Kabir" ? "Naushad" : "Kabir"}/></label></>}
+      {form === "receipt" ? <label>Received by *<select value={receivedBy} onChange={e => {setReceivedBy(e.target.value as FounderName);requestId.current=null;}}>{holders.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label> : <><label>Sent by *<select value={fromFounder} onChange={e => {setFromFounder(e.target.value as FounderName);requestId.current=null;}}>{holders.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label><label>Received by<input readOnly value={holders.find(m=>m.id!==fromFounder)?.name||"No other founder"}/></label></>}
       <label>Reference / transaction ID<input value={reference} maxLength={150} onChange={e => editField(setReference,e.target.value)} placeholder="Optional reference"/></label>
       <label className="payment-wide">Note<textarea value={note} maxLength={1000} onChange={e => editField(setNote,e.target.value)} rows={2} placeholder="Optional details"/></label>
       <div className="payment-form-actions"><button className="btn btn-secondary" type="button" disabled={saving} onClick={closeForm}>Cancel</button><button className="btn btn-primary" type="submit" disabled={saving}>{saving ? "Saving…" : form === "receipt" ? "Save client payment" : "Save founder transfer"}</button></div>
     </form></div></Modal>}
     <div className="payment-ledgers">
-      <section className="surface-card payment-ledger"><div className="payment-ledger-title"><div><ReceiptText size={18}/><h3>Client payments</h3><span>{receipts.length}</span></div><button type="button" onClick={() => setShowVoided(v => !v)}>{showVoided ? "Hide voided" : "Show all history"}</button></div>{receipts.filter(r => showVoided || !r.voidedAt).length ? <div className="payment-ledger-list">{receipts.filter(r => showVoided || !r.voidedAt).map(r => <article className={r.voidedAt ? "payment-ledger-item is-voided" : "payment-ledger-item"} key={r.id}><div className="payment-ledger-primary"><strong>{money(r.amountPaise)}</strong><span className="payment-method-tag">{r.method}</span>{r.voidedAt && <span className="payment-void-tag">Voided</span>}</div><div className="payment-ledger-meta">{transactionDate(r.paidAt)} · Received by {r.receivedBy} · Added by {r.recordedBy}</div>{(r.reference || r.note) && <p>{r.reference ? `Ref: ${r.reference}` : ""}{r.reference && r.note ? " · " : ""}{r.note}</p>}{r.voidedAt && <p>Correction: {r.voidReason}</p>}{!r.voidedAt && <button type="button" disabled={saving} className="payment-void-action" onClick={() => void voidEntry("receipt",r)}>Correct / void entry</button>}</article>)}</div> : <div className="payment-empty"><ArrowDownLeft size={22}/>No client payments recorded yet.</div>}</section>
-      <section className="surface-card payment-ledger"><div className="payment-ledger-title"><div><ArrowLeftRight size={18}/><h3>Founder transfers</h3><span>{transfers.length}</span></div><button type="button" onClick={() => setShowVoided(v => !v)}>{showVoided ? "Hide voided" : "Show all history"}</button></div>{transfers.filter(t => showVoided || !t.voidedAt).length ? <div className="payment-ledger-list">{transfers.filter(t => showVoided || !t.voidedAt).map(t => <article key={t.id} className={t.voidedAt ? "payment-ledger-item is-voided" : "payment-ledger-item"}><div className="payment-ledger-primary"><strong>{money(t.amountPaise)}</strong><span>{t.fromFounder} → {t.toFounder}</span>{t.voidedAt && <span className="payment-void-tag">Voided</span>}</div><div className="payment-ledger-meta">{transactionDate(t.transferredAt)} · {t.method} · Added by {t.recordedBy}</div>{(t.reference || t.note) && <p>{t.reference ? `Ref: ${t.reference}` : ""}{t.reference && t.note ? " · " : ""}{t.note}</p>}{t.voidedAt && <p>Correction: {t.voidReason}</p>}{!t.voidedAt && <button type="button" disabled={saving} className="payment-void-action" onClick={() => void voidEntry("transfer",t)}>Correct / void entry</button>}</article>)}</div> : <div className="payment-empty"><Banknote size={22}/>No founder transfers recorded yet.</div>}</section>
+      <section className="surface-card payment-ledger"><div className="payment-ledger-title"><div><ReceiptText size={18}/><h3>Client payments</h3><span>{receipts.length}</span></div><button type="button" onClick={() => setShowVoided(v => !v)}>{showVoided ? "Hide voided" : "Show all history"}</button></div>{receipts.filter(r => showVoided || !r.voidedAt).length ? <div className="payment-ledger-list">{receipts.filter(r => showVoided || !r.voidedAt).map(r => <article className={r.voidedAt ? "payment-ledger-item is-voided" : "payment-ledger-item"} key={r.id}><div className="payment-ledger-primary"><strong>{money(r.amountPaise)}</strong><span className="payment-method-tag">{r.method}</span>{r.voidedAt && <span className="payment-void-tag">Voided</span>}</div><div className="payment-ledger-meta">{transactionDate(r.paidAt)} · Received by {holders.find(m=>m.id===r.receivedBy)?.name||"Former team member"} · Added by {r.recordedBy}</div>{(r.reference || r.note) && <p>{r.reference ? `Ref: ${r.reference}` : ""}{r.reference && r.note ? " · " : ""}{r.note}</p>}{r.voidedAt && <p>Correction: {r.voidReason}</p>}{!r.voidedAt && <button type="button" disabled={saving} className="payment-void-action" onClick={() => void voidEntry("receipt",r)}>Correct / void entry</button>}</article>)}</div> : <div className="payment-empty"><ArrowDownLeft size={22}/>No client payments recorded yet.</div>}</section>
+      <section className="surface-card payment-ledger"><div className="payment-ledger-title"><div><ArrowLeftRight size={18}/><h3>Founder transfers</h3><span>{transfers.length}</span></div><button type="button" onClick={() => setShowVoided(v => !v)}>{showVoided ? "Hide voided" : "Show all history"}</button></div>{transfers.filter(t => showVoided || !t.voidedAt).length ? <div className="payment-ledger-list">{transfers.filter(t => showVoided || !t.voidedAt).map(t => <article key={t.id} className={t.voidedAt ? "payment-ledger-item is-voided" : "payment-ledger-item"}><div className="payment-ledger-primary"><strong>{money(t.amountPaise)}</strong><span>{holders.find(m=>m.id===t.fromFounder)?.name||"Former member"} → {holders.find(m=>m.id===t.toFounder)?.name||"Former member"}</span>{t.voidedAt && <span className="payment-void-tag">Voided</span>}</div><div className="payment-ledger-meta">{transactionDate(t.transferredAt)} · {t.method} · Added by {t.recordedBy}</div>{(t.reference || t.note) && <p>{t.reference ? `Ref: ${t.reference}` : ""}{t.reference && t.note ? " · " : ""}{t.note}</p>}{t.voidedAt && <p>Correction: {t.voidReason}</p>}{!t.voidedAt && <button type="button" disabled={saving} className="payment-void-action" onClick={() => void voidEntry("transfer",t)}>Correct / void entry</button>}</article>)}</div> : <div className="payment-empty"><Banknote size={22}/>No founder transfers recorded yet.</div>}</section>
     </div>
   </div>;
 }
