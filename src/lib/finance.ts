@@ -1,4 +1,4 @@
-export type FounderName = "Kabir" | "Naushad";
+export type FounderName = string;
 export type PaymentMethod = "Google Pay" | "PhonePe" | "Paytm" | "UPI" | "Bank Transfer" | "Cash" | "Card" | "Other";
 export const PAYMENT_METHODS: PaymentMethod[] = ["Google Pay", "PhonePe", "Paytm", "UPI", "Bank Transfer", "Cash", "Card", "Other"];
 
