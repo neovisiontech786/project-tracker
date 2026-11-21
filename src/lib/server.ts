@@ -32,7 +32,9 @@ export async function authorize() {
   const {userId} = await auth();
   if (!userId) throw new AccessError('Please sign in.',401);
   const sql=database();
-  const existing=await sql`SELECT id,email,display_name,is_active FROM users WHERE id=${userId} LIMIT 1`;
+  const existing=await sql`SELECT id,email,display_name,is_active,revoked_at FROM users WHERE id=${userId} LIMIT 1`;
+  // Explicit suspension is durable: email allowlisting must never undo a revocation.
+  if(existing[0]?.revoked_at) throw new AccessError('Founder access has been suspended. Contact the workspace administrator.',403);
   if(existing[0]?.is_active && ['Kabir','Naushad'].includes(String(existing[0].display_name))){
     return {id:userId,email:String(existing[0].email),name:String(existing[0].display_name) as 'Kabir'|'Naushad'};
   }
@@ -61,7 +63,8 @@ export async function authorize() {
       sql`INSERT INTO users(id,email,display_name,avatar_url,is_active)
         VALUES (${userId},${email},${label},${user.imageUrl||null},true)
         ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email, display_name=EXCLUDED.display_name,
-          avatar_url=EXCLUDED.avatar_url,is_active=true,updated_at=now()`,
+          avatar_url=EXCLUDED.avatar_url,is_active=true,updated_at=now()
+          WHERE users.revoked_at IS NULL`,
       sql`INSERT INTO project_members(project_id,user_id)
         SELECT p.id,${userId} FROM projects p
         WHERE (p.owner_selection='Both' OR p.owner_selection=${label})
@@ -80,7 +83,7 @@ export async function authorize() {
   await sql`INSERT INTO users(id,email,display_name,avatar_url,is_active)
     VALUES (${userId},${displayedEmail},${name.slice(0,120)},${user.imageUrl||null},false)
     ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email,avatar_url=EXCLUDED.avatar_url,updated_at=now()
-    WHERE users.is_active=false`;
+    WHERE users.is_active=false AND users.revoked_at IS NULL`;
   throw new AccessError(`Founder access pending for ${displayedEmail}. Ask Kabir to review the request in Settings, or sign in with your approved email.`,403);
 }
 
