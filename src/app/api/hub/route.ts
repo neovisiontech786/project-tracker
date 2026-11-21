@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import {
   authorize, accessibleProject, database, errorResponse, AccessError, projectTypes,
   safeText, statusToDb, uuidCheck, validate, validOwners, validStatuses,
-  loadWorkspace, syncProjectMemberships, assertSameOrigin
+  loadWorkspace, syncProjectMemberships, assertSameOrigin, requireRole
 } from '@/lib/server';
 import type {ProjectStatus} from '@/lib/types';
 
@@ -20,17 +20,22 @@ export async function POST(request:Request){
   assertSameOrigin(request);
   const actor=await authorize(),sql=database(),data=await request.json();
   validate(data && typeof data==='object' && !Array.isArray(data),'Invalid request.');
+  if(data.action==='create')requireRole(actor,['admin','founder']);
   if(data.action==='create'){
     const d=data.draft||{};
     const name=safeText(d.name,180),description=safeText(d.description||'',5000);
     const client=safeText(d.client||'',180);
     validate(name.length>0,'Project name is required.');
     validate(allowedTypes.includes(d.type),'Invalid project type.');
-    validate(validOwners.includes(d.owner),'Invalid founder assignment.');
+    validate(typeof d.owner==='string' && (d.owner==='All'||/^user_[A-Za-z0-9]{8,80}$/.test(d.owner)),'Invalid team assignment.');
+    if(d.owner!=='All'){
+      const assigned=await sql`SELECT id FROM users WHERE id=${d.owner} AND is_active=true AND revoked_at IS NULL AND removed_at IS NULL LIMIT 1`;
+      validate(assigned.length===1,'Assigned member must be active.');
+    }
     validate(validStatuses.includes(d.status) && d.status!=='On Hold','Invalid initial status.');
     validate(d.isPrivate===undefined || typeof d.isPrivate==='boolean','Invalid privacy setting.');
     const isPrivate=d.isPrivate===true;
-    if(isPrivate && d.owner!==actor.name)throw new AccessError('Private projects can only be assigned to yourself. Change visibility to Shared to assign another founder.',400);
+    if(isPrivate && d.owner!==actor.id)throw new AccessError('Private projects can only be assigned to yourself. Change visibility to Shared to assign anteam member.',400);
     const dueDate=d.deadline||null;
     validate(!dueDate||/^\d{4}-\d{2}-\d{2}$/.test(dueDate),'Invalid deadline.');
     const requestId=uuidCheck(data.requestId);
@@ -71,7 +76,7 @@ export async function POST(request:Request){
   if(data.action==='note'){
     const projectId=uuidCheck(data.projectId),body=safeText(data.body,10000);
     validate(body.length>0,'Note cannot be empty.');
-    await accessibleProject(projectId,actor.id);
+    await accessibleProject(projectId,actor);
     await sql.transaction([
       sql`INSERT INTO project_notes (project_id,body,author_id) VALUES (${projectId},${body},${actor.id})`,
       sql`INSERT INTO activity_logs(project_id,actor_id,action,details)
@@ -87,9 +92,10 @@ export async function PATCH(request:Request){
   assertSameOrigin(request);
   const actor=await authorize(),sql=database(),body=await request.json();
   validate(body&&typeof body==='object'&&!Array.isArray(body),'Invalid update.');
+  requireRole(actor,['admin','founder']);
   const id=uuidCheck(body.id),values=body.values||{};
   validate(values&&typeof values==='object'&&!Array.isArray(values),'Invalid project update.');
-  const current=await accessibleProject(id,actor.id);
+  const current=await accessibleProject(id,actor);
   let status=String(current.status),progress=Number(current.progress);
   let change='Updated project details';
   let holdReason:string|null=null;
@@ -115,7 +121,11 @@ export async function PATCH(request:Request){
   const description=values.description!==undefined?safeText(values.description,5000):String(current.description||'');
   const type=values.type!==undefined?(validate(allowedTypes.includes(values.type),'Invalid type.'),projectTypes[values.type as keyof typeof projectTypes]):String(current.type);
   const client=values.client!==undefined?safeText(values.client,180):String(current.client_name||'');
-  const owner=values.owner!==undefined?(validate(validOwners.includes(values.owner),'Invalid owner.'),values.owner):String(current.owner_selection);
+  const owner=values.owner!==undefined?(validate(typeof values.owner==='string' && (values.owner==='All'||/^user_[A-Za-z0-9]{8,80}$/.test(values.owner)),'Invalid assignment.'),values.owner):String(current.owner_selection);
+  if(owner!=='All'){
+    const assigned=await sql`SELECT id FROM users WHERE id=${owner} AND is_active=true AND revoked_at IS NULL AND removed_at IS NULL LIMIT 1`;
+    validate(assigned.length===1,'Assigned member must be active.');
+  }
   const deadline=values.deadline!==undefined?values.deadline||null:current.due_date;
   validate(!deadline||/^\d{4}-\d{2}-\d{2}$/.test(String(deadline)),'Invalid deadline.');
 
@@ -130,13 +140,13 @@ export async function PATCH(request:Request){
       EXISTS(SELECT 1 FROM project_financials WHERE project_id=${id}) OR
       EXISTS(SELECT 1 FROM client_receipts WHERE project_id=${id}) OR
       EXISTS(SELECT 1 FROM founder_transfers WHERE project_id=${id}) AS has_finance`;
-    if(financial[0]?.has_finance) throw new AccessError('A project with financial history cannot be made private. Keep its financial records visible to both founders.',409);
+    if(financial[0]?.has_finance) throw new AccessError('A project with financial history cannot be made private. Keep its financial records visible to team.',409);
   }
-  if(isPrivate && owner!==actor.name)throw new AccessError('Private projects must be assigned to their creator. Choose Shared to assign the other founder.',400);
+  if(isPrivate && owner!==actor.id)throw new AccessError('Private projects must be assigned to their creator. Choose Shared to assign the team member.',400);
   const archived=values.archived===undefined?current.archived_at:(values.archived?new Date().toISOString():null);
   if(values.archived===true)change='Archived the project';
   if(values.archived===false)change='Restored the project';
-  if(values.isPrivate!==undefined&&values.isPrivate!==Boolean(current.is_private))change=isPrivate?'Made project private':'Shared project with both founders';
+  if(values.isPrivate!==undefined&&values.isPrivate!==Boolean(current.is_private))change=isPrivate?'Made project private':'Shared project with team';
 
   // A single atomic statement applies the status, hold history and activity log only
   // when this version of the project is still current. Concurrent edits get HTTP 409.
