@@ -27,6 +27,8 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   isActive: boolean("is_active").notNull().default(true),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  removedAt: timestamp("removed_at", { withTimezone: true }),
+  role: varchar("role", { length: 12 }).notNull().default("member"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
@@ -62,7 +64,7 @@ export const projects = pgTable(
     type: projectTypeEnum("type").notNull().default("client"),
     clientName: varchar("client_name", { length: 180 }),
     status: projectStatusEnum("status").notNull().default("not_started"),
-    ownerSelection: varchar("owner_selection", { length: 16 }).notNull().default("Both"),
+    ownerSelection: varchar("owner_selection", { length: 255 }).notNull().default("All"),
     progress: integer("progress").notNull().default(0),
     isPrivate: boolean("is_private").notNull().default(false),
     creationRequestId: uuid("creation_request_id"),
@@ -219,6 +221,19 @@ export const activityLogs = pgTable(
     index("activity_logs_project_created_idx").on(t.projectId, t.createdAt),
   ],
 );
+
+export const teamInvitations = pgTable("team_invitations",{
+ id:uuid("id").defaultRandom().primaryKey(),
+ email:varchar("email",{length:320}).notNull().unique(),
+ displayName:varchar("display_name",{length:120}).notNull(),
+ role:varchar("role",{length:12}).notNull(),
+ status:varchar("status",{length:12}).notNull().default("pending"),
+ clerkInvitationId:varchar("clerk_invitation_id",{length:255}),
+ invitedById:varchar("invited_by_id",{length:255}).notNull().references(()=>users.id,{onDelete:"restrict"}),
+ acceptedById:varchar("accepted_by_id",{length:255}).references(()=>users.id,{onDelete:"restrict"}),
+ createdAt:timestamp("created_at",{withTimezone:true}).notNull().defaultNow(),
+ updatedAt:timestamp("updated_at",{withTimezone:true}).notNull().defaultNow()
+},t=>[index("team_invitations_status_idx").on(t.status,t.createdAt)]);
 
 // Company finance is stored in whole paise as bigint to avoid floating-point money.
 export const projectFinancials=pgTable("project_financials",{
