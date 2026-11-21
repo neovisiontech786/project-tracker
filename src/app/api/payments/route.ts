@@ -1,10 +1,9 @@
-import { authorize, accessibleProject, database, errorResponse, AccessError, safeText, uuidCheck, validate, assertSameOrigin } from "@/lib/server";
+import { authorize, accessibleProject, database, errorResponse, AccessError, safeText, uuidCheck, validate, assertSameOrigin, requireRole } from "@/lib/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const METHODS = ["Google Pay", "PhonePe", "Paytm", "UPI", "Bank Transfer", "Cash", "Card", "Other"] as const;
-const FOUNDERS = ["Kabir", "Naushad"] as const;
 const reply = (data: unknown, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 
 function amountInPaise(value: unknown, allowZero = false): number {
@@ -18,8 +17,12 @@ function validMethod(value: unknown): string {
   validate(typeof value === "string" && METHODS.includes(value as typeof METHODS[number]), "Choose a valid payment method.");
   return value;
 }
-function founder(value: unknown): string {
-  validate(typeof value === "string" && FOUNDERS.includes(value as typeof FOUNDERS[number]), "Choose Kabir or Naushad.");
+async function financeHolder(value: unknown): Promise<string> {
+  validate(typeof value==='string' && /^user_[A-Za-z0-9]{8,80}$/.test(value),"Select a valid active founder.");
+  const sql=database();
+  const eligible=await sql`SELECT id FROM users WHERE id=${value}
+    AND role IN ('admin','founder') AND is_active=true AND revoked_at IS NULL AND removed_at IS NULL LIMIT 1`;
+  validate(eligible.length===1,"Select an active admin or founder.");
   return value;
 }
 function validTime(value: unknown): string {
@@ -42,8 +45,9 @@ function integerAmount(value: unknown): number {
 export async function GET(request: Request) {
   try {
     const actor = await authorize();
+    requireRole(actor,['admin','founder']);
     const selected = new URL(request.url).searchParams.get("projectId");
-    if (selected) await accessibleProject(uuidCheck(selected), actor.id);
+    if (selected) await accessibleProject(uuidCheck(selected), actor);
     const sql = database();
     // Private project finance is scoped to its creator, including records and totals.
     const [finance, receipts, transfers] = await Promise.all([
@@ -89,10 +93,11 @@ export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
     const actor = await authorize();
+    requireRole(actor,['admin','founder']);
     const data = await request.json();
     validate(data && typeof data === "object" && !Array.isArray(data), "Invalid payment request.");
     const projectId = uuidCheck(data.projectId);
-    const project = await accessibleProject(projectId, actor.id);
+    const project = await accessibleProject(projectId, actor);
     // Company financial records must remain visible to both founders.
     // Private projects can be shared before they receive company quotations or payments.
     if(project.is_private) throw new AccessError("Make this project shared before recording company financial transactions.",409);
@@ -122,7 +127,7 @@ export async function POST(request: Request) {
       const note = optionalText(data.note, 1000);
 
       if (data.action === "receipt") {
-        const receivedBy = founder(data.receivedBy);
+        const receivedBy = await financeHolder(data.receivedBy);
         const paidAt = validTime(data.paidAt);
         const details = JSON.stringify({ description: "Recorded client payment", amountPaise: amount, method, receivedBy });
         const result = await sql`
@@ -148,8 +153,8 @@ export async function POST(request: Request) {
         return reply({ success: true, idempotent: result.length === 0 });
       }
 
-      const fromFounder = founder(data.fromFounder);
-      const toFounder = founder(data.toFounder);
+      const fromFounder = await financeHolder(data.fromFounder);
+      const toFounder = await financeHolder(data.toFounder);
       validate(fromFounder !== toFounder, "A founder cannot transfer money to themselves.");
       const transferredAt = validTime(data.transferredAt);
       const details = JSON.stringify({ description: "Recorded founder-to-founder transfer", amountPaise: amount, fromFounder, toFounder, method });
