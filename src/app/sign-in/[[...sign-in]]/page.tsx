@@ -39,7 +39,7 @@ export default function SignInPage() {
             <div className="hub-login-benefits">
               <div className="hub-login-benefit">
                 <div className="hub-login-benefit-icon"><CheckCircle2 size={19} /></div>
-                <div><strong>Everything in sync</strong><span>Shared updates for Kabir and Naushad.</span></div>
+                <div><strong>Everything in sync</strong><span>Shared updates for your entire team.</span></div>
               </div>
               <div className="hub-login-benefit">
                 <div className="hub-login-benefit-icon"><FolderKanban size={19} /></div>
