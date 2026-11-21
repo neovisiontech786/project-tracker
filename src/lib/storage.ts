@@ -2,6 +2,7 @@ import 'server-only';
 import { S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { DeleteObjectCommand,GetObjectCommand,HeadObjectCommand,PutObjectCommand } from '@aws-sdk/client-s3';
+import { hasExpectedFileSignature } from './file-validation';
 
 export const BUCKET='project-documents';
 function storage(){
@@ -21,8 +22,12 @@ export async function signDownload(key:string,fileName:string){
  // The object is private; this is an ephemeral authorized link.
  return getSignedUrl(client,new GetObjectCommand({Bucket:BUCKET,Key:key,ResponseContentDisposition:`attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`}),{expiresIn:120});
 }
-export async function confirmFile(key:string,expectedSize:number){
- const actual=await storage().send(new HeadObjectCommand({Bucket:BUCKET,Key:key}));
- return Number(actual.ContentLength)===expectedSize;
+export async function confirmFile(key:string,expectedSize:number,expectedMimeType:string,fileName:string){
+ const client=storage();
+ const actual=await client.send(new HeadObjectCommand({Bucket:BUCKET,Key:key}));
+ if(Number(actual.ContentLength)!==expectedSize || actual.ContentType!==expectedMimeType) return false;
+ const prefix=await client.send(new GetObjectCommand({Bucket:BUCKET,Key:key,Range:'bytes=0-15'}));
+ const header=await prefix.Body?.transformToByteArray();
+ return Boolean(header && hasExpectedFileSignature(fileName,header));
 }
 export async function removeFile(key:string){await storage().send(new DeleteObjectCommand({Bucket:BUCKET,Key:key}));}
