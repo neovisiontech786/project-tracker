@@ -1,5 +1,5 @@
 -- Convert the legacy two-person workspace into an invitation-only team.
--- Existing Kabir/Naushad accounts are mapped once; no names are used by runtime authorization.
+-- Existing Kabir/Naushad accounts are mapped once, no names are used by runtime authorization.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar(12) NOT NULL DEFAULT 'member';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS removed_at timestamptz;
 UPDATE users SET role=CASE WHEN display_name='Kabir' THEN 'admin'
@@ -8,7 +8,7 @@ UPDATE users SET role=CASE WHEN display_name='Kabir' THEN 'admin'
 ALTER TABLE users ADD CONSTRAINT users_team_role_check CHECK(role IN ('admin','founder','member'));
 DROP INDEX IF EXISTS users_one_active_founder_role;
 
--- Project assignments reference stable Clerk user IDs; 'All' means all Admins and Founders.
+-- Project assignments reference stable Clerk user IDs. 'All' means all Admins and Founders.
 ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_owner;
 ALTER TABLE projects ALTER COLUMN owner_selection TYPE varchar(255);
 UPDATE projects p SET owner_selection=u.id
