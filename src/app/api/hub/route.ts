@@ -1,3 +1,4 @@
+import { normalizedProjectProgress, type DatabaseProjectStatus } from '@/lib/project-state';
 import { randomUUID } from 'node:crypto';
 import {
   authorize, accessibleProject, database, errorResponse, AccessError, projectTypes,
@@ -100,13 +101,9 @@ export async function PATCH(request:Request){
     validate(Number.isInteger(values.progress)&&values.progress>=0&&values.progress<=100,'Progress must be between 0 and 100.');
     progress=values.progress;change=`Updated progress to ${progress}%`;
   }
-  // Maintain domain invariants for every transition, including reopening completed work.
-  if(status==='completed')progress=100;
-  else if(status==='not_started')progress=0;
-  else if(progress===100){
-    validate(values.progress===undefined,'Only completed projects may have 100% progress.');
-    progress=99;
-  }
+  // Apply state-machine rules consistently, including reopening completed work.
+  try { progress=normalizedProjectProgress(status as DatabaseProjectStatus,progress,values.progress); }
+  catch(e){ validate(false,e instanceof Error?e.message:'Invalid progress change.'); }
   if(values.archived!==undefined)validate(typeof values.archived==='boolean','Invalid archive value.');
   const name=values.name!==undefined?safeText(values.name,180):String(current.name);
   validate(name.length>0,'Project name is required.');
