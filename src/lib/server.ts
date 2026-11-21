@@ -15,6 +15,17 @@ export { statusToDb, dbToStatus, projectTypes };
 export class AccessError extends Error {
   constructor(message: string, public status: number = 403) { super(message); }
 }
+// Reject browser cross-site writes as an additional layer beyond Clerk's session cookies.
+export function assertSameOrigin(request: Request): void {
+  const origin = request.headers.get('origin');
+  if (!origin) return; // Non-browser clients are still authenticated at the API boundary.
+  try {
+    const from=new URL(origin), target=new URL(request.url);
+    if(from.protocol !== target.protocol || from.host !== target.host) throw new Error('origin mismatch');
+  }catch{
+    throw new AccessError('Cross-origin modifications are not allowed.',403);
+  }
+}
 export function database() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new AccessError('DATABASE_URL is not configured.',503);
@@ -32,7 +43,9 @@ export async function authorize() {
   const {userId} = await auth();
   if (!userId) throw new AccessError('Please sign in.',401);
   const sql=database();
-  const existing=await sql`SELECT id,email,display_name,is_active FROM users WHERE id=${userId} LIMIT 1`;
+  const existing=await sql`SELECT id,email,display_name,is_active,revoked_at FROM users WHERE id=${userId} LIMIT 1`;
+  // Explicit suspension is durable: email allowlisting must never undo a revocation.
+  if(existing[0]?.revoked_at) throw new AccessError('Founder access has been suspended. Contact the workspace administrator.',403);
   if(existing[0]?.is_active && ['Kabir','Naushad'].includes(String(existing[0].display_name))){
     return {id:userId,email:String(existing[0].email),name:String(existing[0].display_name) as 'Kabir'|'Naushad'};
   }
@@ -46,8 +59,10 @@ export async function authorize() {
   const verifiedEmails=emails.filter(e=>e.verification?.status==='verified').map(e=>e.emailAddress.trim().toLowerCase());
   const label=founderForVerifiedEmails(verifiedEmails, allowed);
   const email=label ? allowed[label==='Kabir'?0:1] : null;
-  const displayedEmail=user.primaryEmailAddress?.emailAddress.trim().toLowerCase() || emails[0]?.emailAddress.trim().toLowerCase();
-  if(!displayedEmail) throw new AccessError('Add a verified email address to your Clerk account.',403);
+  const preferred=user.primaryEmailAddress?.emailAddress.trim().toLowerCase();
+  const displayedEmail=preferred && verifiedEmails.includes(preferred) ? preferred : verifiedEmails[0];
+  // Never create approvable access requests from unverified email addresses.
+  if(!displayedEmail) throw new AccessError('Verify your email address in Clerk before requesting founder access.',403);
 
   if(email){
     // Never silently replace the identity of an already onboarded founder.
@@ -61,7 +76,8 @@ export async function authorize() {
       sql`INSERT INTO users(id,email,display_name,avatar_url,is_active)
         VALUES (${userId},${email},${label},${user.imageUrl||null},true)
         ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email, display_name=EXCLUDED.display_name,
-          avatar_url=EXCLUDED.avatar_url,is_active=true,updated_at=now()`,
+          avatar_url=EXCLUDED.avatar_url,is_active=true,updated_at=now()
+          WHERE users.revoked_at IS NULL`,
       sql`INSERT INTO project_members(project_id,user_id)
         SELECT p.id,${userId} FROM projects p
         WHERE (p.owner_selection='Both' OR p.owner_selection=${label})
@@ -80,7 +96,7 @@ export async function authorize() {
   await sql`INSERT INTO users(id,email,display_name,avatar_url,is_active)
     VALUES (${userId},${displayedEmail},${name.slice(0,120)},${user.imageUrl||null},false)
     ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email,avatar_url=EXCLUDED.avatar_url,updated_at=now()
-    WHERE users.is_active=false`;
+    WHERE users.is_active=false AND users.revoked_at IS NULL`;
   throw new AccessError(`Founder access pending for ${displayedEmail}. Ask Kabir to review the request in Settings, or sign in with your approved email.`,403);
 }
 
@@ -106,8 +122,8 @@ export async function syncFounderMemberships(userId:string,label:'Kabir'|'Nausha
 }
 export async function accessibleProject(projectId:string,actorId:string){
   const sql=database();
-  const rows=await sql`SELECT * FROM projects WHERE id=${projectId}
-    AND (is_private=false OR created_by_id=${actorId}) LIMIT 1`;
+  const rows=await sql`SELECT p.*,p.xmin::text AS row_version FROM projects p WHERE p.id=${projectId}
+    AND (p.is_private=false OR p.created_by_id=${actorId}) LIMIT 1`;
   if(rows.length!==1)throw new AccessError('Project not found or not accessible.',404);
   return rows[0];
 }

@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import {authorize,accessibleProject,AccessError,database,errorResponse,uuidCheck,validate} from '@/lib/server';
+import {authorize,accessibleProject,AccessError,database,errorResponse,uuidCheck,validate,assertSameOrigin} from '@/lib/server';
 import {confirmFile,removeFile,signDownload,signUpload} from '@/lib/storage';
 
 export const runtime='nodejs';export const dynamic='force-dynamic';
@@ -25,6 +25,7 @@ export async function GET(req:Request){
 }
 export async function POST(req:Request){
  try{
+  assertSameOrigin(req);
   const actor=await authorize(),sql=database(),input=await req.json();
   if(input.action==='prepare'){
    const projectId=uuidCheck(input.projectId);
@@ -44,8 +45,8 @@ export async function POST(req:Request){
    const id=uuidCheck(input.id),doc=await getDocument(id,actor.id);
    validate(doc.uploaded_by_id===actor.id,'Only the uploader can finalize a document.');
    validate(doc.upload_status==='pending','Document has already been finalized.');
-   const confirmed=await confirmFile(String(doc.storage_key),Number(doc.size_bytes));
-   validate(confirmed,'Uploaded document size does not match the original request.');
+   const confirmed=await confirmFile(String(doc.storage_key),Number(doc.size_bytes),String(doc.mime_type),String(doc.original_name));
+   validate(confirmed,'Uploaded document contents, MIME type or size do not match the expected file type.');
    await sql.transaction([
     sql`UPDATE project_documents SET upload_status='ready' WHERE id=${id}`,
     sql`INSERT INTO activity_logs(project_id,actor_id,action,details) VALUES (${doc.project_id},${actor.id},'document_uploaded',${JSON.stringify({description:`Uploaded ${doc.original_name}`})}::jsonb)`
@@ -56,10 +57,17 @@ export async function POST(req:Request){
  }catch(e){return errorResponse(e);}
 }
 export async function DELETE(req:Request){
- try{const actor=await authorize(),sql=database(),{id}=await req.json();const doc=await getDocument(uuidCheck(id),actor.id);
-   await removeFile(String(doc.storage_key));
-   await sql`UPDATE project_documents SET deleted_at=now(),deleted_by_id=${actor.id} WHERE id=${id}`;
-   await sql`INSERT INTO activity_logs(project_id,actor_id,action,details) VALUES (${doc.project_id},${actor.id},'document_removed',${JSON.stringify({description:`Removed ${doc.original_name}`})}::jsonb)`;
+ try{
+  assertSameOrigin(req);const actor=await authorize(),sql=database(),{id}=await req.json();const doc=await getDocument(uuidCheck(id),actor.id);
+   // Revoke application access atomically before removing the storage object.
+   await sql.transaction([
+     sql`UPDATE project_documents SET deleted_at=now(),deleted_by_id=${actor.id} WHERE id=${id} AND deleted_at IS NULL`,
+     sql`INSERT INTO activity_logs(project_id,actor_id,action,details) VALUES (${doc.project_id},${actor.id},'document_removed',${JSON.stringify({description:`Removed ${doc.original_name}`})}::jsonb)`
+   ]);
+   // An object-store outage must not make a deleted file accessible through the app.
+   // Retain metadata for a future orphan-object cleanup if physical deletion fails.
+   try { await removeFile(String(doc.storage_key)); }
+   catch(e){ console.error('Document storage cleanup failed for',id,e instanceof Error?e.message:'Unknown storage error'); }
    return Response.json({success:true});
  }catch(e){return errorResponse(e);}
 }

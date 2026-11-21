@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { Archive, ArrowUpRight, Bell, ChevronsUpDown, CircleHelp, FolderKanban, LayoutGrid, LockKeyhole, Menu, Plus, Search, Settings2, Sparkles, Wallet, X } from "lucide-react";
+import { Archive, ArrowUpRight, ChevronsUpDown, CircleHelp, FolderKanban, LayoutGrid, LockKeyhole, Menu, Plus, Search, Settings2, Sparkles, Wallet, X } from "lucide-react";
 import { useHub } from "@/lib/project-store";
 import {useUser,SignOutButton} from "@clerk/nextjs";
 import { NewProjectModal } from "./new-project-modal";
@@ -13,6 +13,15 @@ const NAV=[{title:"Overview",entries:[{href:"/dashboard",name:"Dashboard",Icon:L
 export function AppShell({children}:{children:React.ReactNode}){
  const path=usePathname(); const router=useRouter(); const {projects,error,ready,reload}=useHub();const {user}=useUser();
  const [mobileOpen,setMobileOpen]=useState(false); const [newOpen,setNewOpen]=useState(false);const [searchOpen,setSearchOpen]=useState(false);const [term,setTerm]=useState("");
+ useEffect(()=>{
+   const shortcut=(event:KeyboardEvent)=>{
+     if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){
+       event.preventDefault();setSearchOpen(true);
+     }else if(event.key==='Escape')setSearchOpen(false);
+   };
+   window.addEventListener('keydown',shortcut);
+   return ()=>window.removeEventListener('keydown',shortcut);
+ },[]);
  const activeCount=projects.filter(p=>!p.archived&&p.status==="In Progress").length;
  const searchable=projects.filter(p=>!p.archived&&(`${p.name} ${p.client}`).toLowerCase().includes(term.toLowerCase())).slice(0,5);
  const nav=<>
@@ -44,8 +53,8 @@ export function AppShell({children}:{children:React.ReactNode}){
    <aside className="sidebar desktop-sidebar">{nav}</aside>
    {mobileOpen&&<div className="mobile-overlay" onClick={()=>setMobileOpen(false)}><aside className="sidebar mobile-sidebar" onClick={e=>e.stopPropagation()}><button className="mobile-close icon-button" onClick={()=>setMobileOpen(false)} aria-label="Close navigation"><X size={20}/></button>{nav}</aside></div>}
    <div className="main-column">
-     <header className="topbar"><div className="topbar-left"><button className="icon-button hamburger" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={20}/></button><span className="breadcrumb-root">Workspace</span><span className="breadcrumb-slash">/</span><span className="breadcrumb-current">{path.startsWith("/projects/")?"Project details":path.startsWith("/projects")?"Projects":path==="/settings"?"Settings":"Dashboard"}</span></div>
-       <div className="topbar-right"><button className="top-search" onClick={()=>setSearchOpen(true)}><Search size={17}/><span>Quick search</span><kbd>⌘ K</kbd></button><ThemeToggle/><span className="topbar-split"/><button className="icon-button notification-button" title="Demo: notifications aren't connected yet" onClick={()=>setSearchOpen(true)} aria-label="Search project updates"><Bell size={19}/><span className="notification-dot"/></button><div className="top-avatar">{(user?.firstName||"F")[0]}</div></div>
+     <header className="topbar"><div className="topbar-left"><button className="icon-button hamburger" onClick={()=>setMobileOpen(true)} aria-label="Open navigation"><Menu size={20}/></button><span className="breadcrumb-root">Workspace</span><span className="breadcrumb-slash">/</span><span className="breadcrumb-current">{path.startsWith("/projects/")?"Project details":path.startsWith("/projects")?"Projects":path==="/settings"?"Settings":path==="/payments"?"Payments":"Dashboard"}</span></div>
+       <div className="topbar-right"><button className="top-search" onClick={()=>setSearchOpen(true)}><Search size={17}/><span>Quick search</span><kbd>⌘ K</kbd></button><ThemeToggle/><span className="topbar-split"/><div className="top-avatar">{(user?.firstName||"F")[0]}</div></div>
      </header>
      {error&&<div className="demo-strip" role="alert"><Sparkles size={13}/><strong>Connection issue</strong><span>{error}</span></div>}{!ready&&<div className="demo-strip">Loading shared workspace…</div>}
      <main className="page-main">{children}</main>

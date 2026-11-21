@@ -1,4 +1,4 @@
-import { authorize, accessibleProject, database, errorResponse, AccessError, safeText, uuidCheck, validate } from "@/lib/server";
+import { authorize, accessibleProject, database, errorResponse, AccessError, safeText, uuidCheck, validate, assertSameOrigin } from "@/lib/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -87,11 +87,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const actor = await authorize();
     const data = await request.json();
     validate(data && typeof data === "object" && !Array.isArray(data), "Invalid payment request.");
     const projectId = uuidCheck(data.projectId);
-    await accessibleProject(projectId, actor.id);
+    const project = await accessibleProject(projectId, actor.id);
+    // Company financial records must remain visible to both founders.
+    // Private projects can be shared before they receive company quotations or payments.
+    if(project.is_private) throw new AccessError("Make this project shared before recording company financial transactions.",409);
     const sql = database();
 
     if (data.action === "quote") {
