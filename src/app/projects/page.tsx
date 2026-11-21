@@ -11,10 +11,10 @@ import type { ProjectStatus } from "@/lib/types";
 const filters=["All Projects","In Progress","On Hold","Not Started","Completed","Cancelled"] as const;
 export default function ProjectsPage(){return <Suspense fallback={<div className="page-container"><div className="surface-card" style={{padding:24}}>Loading projects…</div></div>}><ProjectsContent/></Suspense>}
 function ProjectsContent(){
- const {projects}=useHub();const params=useSearchParams();const fromUrl=params.get("status")||"All Projects";const archived=params.get("view")==="archived";const privateView=params.get("view")==="private";const owner=params.get("owner");
+ const {projects,teamMembers}=useHub();const params=useSearchParams();const fromUrl=params.get("status")||"All Projects";const archived=params.get("view")==="archived";const privateView=params.get("view")==="private";const owner=params.get("owner");
  const [filter,setFilter]=useState<string>(fromUrl);const [search,setSearch]=useState("");const [layout,setLayout]=useState<"list"|"cards">("list");
  useEffect(()=>{setFilter(fromUrl);},[fromUrl]);
- const visible=projects.filter(p=>Boolean(p.archived)===archived && (!privateView||p.isPrivate) && (!owner||p.owner===owner||p.owner==="Both"));
+ const visible=projects.filter(p=>Boolean(p.archived)===archived && (!privateView||p.isPrivate) && (!owner||p.owner===owner||(p.owner==="All"&&teamMembers.some(m=>m.id===owner&&(m.role==="admin"||m.role==="founder")))));
  const results=useMemo(()=>visible.filter(p=>(filter==="All Projects"||p.status===filter)&&`${p.name} ${p.client} ${p.description}`.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>new Date(b.updatedAt).getTime()-new Date(a.updatedAt).getTime()),[visible,filter,search]);
  return <div className="page-container project-list-page"><div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line"/>PROJECT WORKSPACE</div><h1>{archived?"Archived projects":privateView?"My private projects":owner?`${owner}’s projects`:"All projects"}</h1><p>{archived?"A record of projects you have archived.":privateView?"Projects only you can see and manage.":"Everything you’re building, beautifully organized."}</p></div><CreateProjectButton/></div>
   <div className="project-intro"><div className="project-intro-icon"><FolderKanban size={22}/></div><div><strong>{visible.length} projects in your workspace</strong><p>Stay aligned on what's active, paused, or completed.</p></div><div className="project-intro-ornament">✳</div></div>

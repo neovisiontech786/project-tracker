@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import {authorize,accessibleProject,AccessError,database,errorResponse,uuidCheck,validate,assertSameOrigin} from '@/lib/server';
+import {authorize,accessibleProject,AccessError,database,errorResponse,uuidCheck,validate,assertSameOrigin,type TeamActor} from '@/lib/server';
 import {confirmFile,removeFile,signDownload,signUpload} from '@/lib/storage';
 
 export const runtime='nodejs';export const dynamic='force-dynamic';
@@ -9,16 +9,16 @@ const extensions:Record<string,string>={
  jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',zip:'application/zip'
 };
 const categories=['requirements','quotations','agreements','designs','other'];
-async function getDocument(id:string, actorId:string){
+async function getDocument(id:string, actor:TeamActor){
  const sql=database();const rows=await sql`SELECT d.* FROM project_documents d
    JOIN projects p ON p.id=d.project_id WHERE d.id=${id} AND d.deleted_at IS NULL
-   AND (p.is_private=false OR p.created_by_id=${actorId}) LIMIT 1`;
+   AND (p.created_by_id=${actor.id} OR (p.is_private=false AND (${actor.role} IN ('admin','founder') OR p.owner_selection=${actor.id}))) LIMIT 1`;
  if(rows.length!==1)throw new AccessError('Document not found or not accessible.',404);
  return rows[0];
 }
 export async function GET(req:Request){
  try{const actor=await authorize();const id=uuidCheck(new URL(req.url).searchParams.get('id'));
-  const d=await getDocument(id,actor.id);validate(d.upload_status==='ready','Document upload is incomplete.');
+  const d=await getDocument(id,actor);validate(d.upload_status==='ready','Document upload is incomplete.');
   const url=await signDownload(String(d.storage_key),String(d.original_name));
   return Response.json({url},{headers:{'Cache-Control':'no-store'}});
  }catch(e){return errorResponse(e);}
@@ -34,7 +34,7 @@ export async function POST(req:Request){
    validate(!!extensions[ext],'Unsupported document type.');
    validate(Number.isInteger(input.size)&&input.size>0&&input.size<=20*1024*1024,'Maximum file size is 20 MB.');
    const category=String(input.category||'other').toLowerCase();validate(categories.includes(category),'Invalid category.');
-   await accessibleProject(projectId,actor.id);
+   await accessibleProject(projectId,actor);
    const id=randomUUID(),key=`projects/${projectId}/${id}.${ext}`,mimeType=extensions[ext];
    const {url,headers}=await signUpload(key,mimeType);
    await sql`INSERT INTO project_documents (id,project_id,category,original_name,mime_type,size_bytes,storage_key,uploaded_by_id,upload_status)
@@ -42,7 +42,7 @@ export async function POST(req:Request){
    return Response.json({id,url,headers});
   }
   if(input.action==='complete'){
-   const id=uuidCheck(input.id),doc=await getDocument(id,actor.id);
+   const id=uuidCheck(input.id),doc=await getDocument(id,actor);
    validate(doc.uploaded_by_id===actor.id,'Only the uploader can finalize a document.');
    validate(doc.upload_status==='pending','Document has already been finalized.');
    const confirmed=await confirmFile(String(doc.storage_key),Number(doc.size_bytes),String(doc.mime_type),String(doc.original_name));
@@ -58,7 +58,8 @@ export async function POST(req:Request){
 }
 export async function DELETE(req:Request){
  try{
-  assertSameOrigin(req);const actor=await authorize(),sql=database(),{id}=await req.json();const doc=await getDocument(uuidCheck(id),actor.id);
+  assertSameOrigin(req);const actor=await authorize(),sql=database(),{id}=await req.json();const doc=await getDocument(uuidCheck(id),actor);
+   if(actor.role==='member' && doc.uploaded_by_id!==actor.id)throw new AccessError('Members can only remove their own uploads.',403);
    // Revoke application access atomically before removing the storage object.
    await sql.transaction([
      sql`UPDATE project_documents SET deleted_at=now(),deleted_by_id=${actor.id} WHERE id=${id} AND deleted_at IS NULL`,

@@ -2,16 +2,21 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import type { ProjectOwner, ProjectStatus } from "@/lib/types";
+import { useHub } from "@/lib/project-store";
 
 export function StatusBadge({status}:{status:ProjectStatus}){
   const cls:Record<ProjectStatus,string>={"In Progress":"status-running","On Hold":"status-hold","Completed":"status-done","Not Started":"status-new","Cancelled":"status-cancelled"};
   return <span className={`status-badge ${cls[status]}`}><span className="status-dot"/>{status}</span>;
 }
 export function OwnerAvatars({owner,compact=false}:{owner:ProjectOwner,compact?:boolean}){
-  return <span className="owner-stack">
-    {(owner==="Both"?["Kabir","Naushad"]:[owner]).map(o=><span className={`owner-avatar ${o==="Naushad"?"avatar-n":"avatar-k"}`} key={o} title={o}>{o==="Naushad"?"N":"K"}</span>)}
-    {!compact&&<span className="owner-label">{owner=== "Both"?"Both founders":owner}</span>}
-  </span>;
+ const {teamMembers}=useHub();
+ const assigned=owner==='All'?teamMembers.filter(m=>m.role==='admin'||m.role==='founder'):teamMembers.filter(m=>m.id===owner);
+ const label=owner==='All'?'All admins & founders':assigned[0]?.name||'Unassigned';
+ return <span className="owner-stack">
+  {assigned.slice(0,3).map(m=><span className="owner-avatar" key={m.id} title={m.name}>{m.name.charAt(0).toUpperCase()}</span>)}
+  {assigned.length>3&&<span className="owner-avatar" title={label}>+{assigned.length-3}</span>}
+  {!compact&&<span className="owner-label">{label}</span>}
+ </span>;
 }
 export function ProgressBar({value}:{value:number}){
  return <div className="progress-outer"><span style={{width:`${Math.max(0,Math.min(value,100))}%`}} className="progress-inner"/></div>;

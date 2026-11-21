@@ -1,5 +1,7 @@
 export type ProjectStatus = "Not Started" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
-export type ProjectOwner = "Kabir" | "Naushad" | "Both";
+export type ProjectOwner = string;
+export type TeamRole = "admin" | "founder" | "member";
+export interface TeamMember { id:string; name:string; email:string; role:TeamRole; active:boolean; }
 export type ProjectType = "Client Project" | "Internal Product";
 export type ProjectAccent = "indigo" | "cyan" | "rose" | "amber" | "emerald" | "violet";
 
